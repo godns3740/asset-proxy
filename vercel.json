@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "api/assets.js": { "runtime": "nodejs20.x" },
-    "api/quote.js": { "runtime": "nodejs20.x" },
-    "api/fx.js": { "runtime": "nodejs20.x" }
-  }
-}
+{}
