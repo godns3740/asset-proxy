@@ -494,16 +494,101 @@ let editingId = null;
 const now = new Date();
 const nowYM = now.getFullYear() * 12 + now.getMonth();
 
-function loadAssets() {
-  const saved = localStorage.getItem('gw_assets');
-  assets = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_ASSETS));
+// ─── DB (Supabase via Proxy) ─────────────────────────────────
+async function loadAssets() {
+  try {
+    showLoading(true);
+    const r = await fetch(`${PROXY_BASE_URL}/api/assets`);
+    const data = await r.json();
+    if (Array.isArray(data) && data.length > 0) {
+      assets = data.map(dbToAsset);
+    } else {
+      // 최초 실행: 기본 데이터 DB에 삽입
+      await seedDefaultAssets();
+    }
+  } catch(e) {
+    console.warn('DB 로드 실패, 로컬 폴백:', e);
+    const saved = localStorage.getItem('gw_assets');
+    assets = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_ASSETS));
+  } finally {
+    showLoading(false);
+  }
 }
-function saveAssets() {
-  localStorage.setItem('gw_assets', JSON.stringify(assets));
-  localStorage.setItem('gw_updated', new Date().toLocaleString('ko-KR'));
+
+function dbToAsset(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    status: row.status,
+    amount: Number(row.amount),
+    monthly: Number(row.monthly),
+    rate: Number(row.rate),
+    start: row.start_date || '',
+    maturity: row.maturity || '',
+    memo: row.memo || '',
+  };
 }
-function nextId() {
-  return assets.length > 0 ? Math.max(...assets.map(a => a.id)) + 1 : 1;
+function assetToDb(a) {
+  return {
+    name: a.name,
+    type: a.type,
+    status: a.status,
+    amount: a.amount,
+    monthly: a.monthly,
+    rate: a.rate,
+    start_date: a.start || null,
+    maturity: a.maturity || null,
+    memo: a.memo || '',
+  };
+}
+
+async function seedDefaultAssets() {
+  const rows = DEFAULT_ASSETS.map(assetToDb);
+  const r = await fetch(`${PROXY_BASE_URL}/api/assets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(rows),
+  });
+  const data = await r.json();
+  assets = Array.isArray(data) ? data.map(dbToAsset) : [];
+}
+
+async function dbAddAsset(a) {
+  const r = await fetch(`${PROXY_BASE_URL}/api/assets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(assetToDb(a)),
+  });
+  const data = await r.json();
+  return Array.isArray(data) ? dbToAsset(data[0]) : null;
+}
+
+async function dbUpdateAsset(a) {
+  await fetch(`${PROXY_BASE_URL}/api/assets`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: a.id, ...assetToDb(a) }),
+  });
+}
+
+async function dbDeleteAsset(id) {
+  await fetch(`${PROXY_BASE_URL}/api/assets?id=${id}`, { method: 'DELETE' });
+}
+
+function showLoading(on) {
+  let el = document.getElementById('loading-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'loading-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(14,15,17,0.85);z-index:500;display:flex;align-items:center;justify-content:center;font-size:15px;color:#8b8f9a;gap:10px;';
+    el.innerHTML = '<div style="width:18px;height:18px;border:2px solid #2a2d35;border-top-color:#4ade80;border-radius:50%;animation:spin 0.7s linear infinite"></div> 데이터 불러오는 중...';
+    document.body.appendChild(el);
+    const style = document.createElement('style');
+    style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+  }
+  el.style.display = on ? 'flex' : 'none';
 }
 
 // ─── STOCK PRICE FETCH ───────────────────────────────────────
@@ -531,7 +616,11 @@ async function fetchPrices() {
 
     // 자산 금액 업데이트
     applyPricesToAssets();
-    saveAssets();
+    // DB 업데이트: 주가 변경된 자산들만 저장
+    for (const a of assets) {
+      const ticker = STOCK_TICKERS[a.name];
+      if (ticker && cachedPrices[ticker]) await dbUpdateAsset(a);
+    }
     renderDashboard();
     renderAssets();
     showToast('✓ 주가 업데이트됨', true);
@@ -795,7 +884,7 @@ function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
   editingId = null;
 }
-function saveAsset() {
+async function saveAsset() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { showToast('자산명을 입력해주세요'); return; }
   const data = {
@@ -809,24 +898,34 @@ function saveAsset() {
     maturity: document.getElementById('f-maturity').value,
     memo: document.getElementById('f-memo').value,
   };
-  if (editingId) {
-    const idx = assets.findIndex(a => a.id === editingId);
-    assets[idx] = { ...assets[idx], ...data };
-    showToast('✓ 수정됐어요', true);
-  } else {
-    assets.push({ id: nextId(), ...data });
-    showToast('✓ 추가됐어요', true);
-  }
-  saveAssets();
   closeModal();
+  try {
+    if (editingId) {
+      const updated = { ...assets.find(a => a.id === editingId), ...data };
+      await dbUpdateAsset(updated);
+      const idx = assets.findIndex(a => a.id === editingId);
+      assets[idx] = updated;
+      showToast('✓ 수정됐어요', true);
+    } else {
+      const created = await dbAddAsset(data);
+      if (created) assets.push(created);
+      showToast('✓ 추가됐어요', true);
+    }
+  } catch(e) {
+    showToast('저장 실패: ' + e.message);
+  }
   renderDashboard();
   renderAssets();
 }
-function deleteAsset(id) {
+async function deleteAsset(id) {
   if (!confirm('이 자산을 삭제할까요?')) return;
-  assets = assets.filter(a => a.id !== id);
-  saveAssets();
-  showToast('삭제됐어요');
+  try {
+    await dbDeleteAsset(id);
+    assets = assets.filter(a => a.id !== id);
+    showToast('삭제됐어요');
+  } catch(e) {
+    showToast('삭제 실패: ' + e.message);
+  }
   renderDashboard();
   renderAssets();
 }
@@ -988,14 +1087,13 @@ document.getElementById('modal-bg').addEventListener('click', function(e) {
 const d = new Date();
 document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 
-loadAssets();
-renderDashboard();
-renderAssets();
-
-// 앱 시작 시 자동 주가 fetch (PROXY_BASE_URL 설정된 경우)
-if (PROXY_BASE_URL) {
-  fetchPrices();
-}
+// 앱 시작
+(async () => {
+  await loadAssets();
+  renderDashboard();
+  renderAssets();
+  if (PROXY_BASE_URL) fetchPrices();
+})();
 </script>
 </body>
 </html>
