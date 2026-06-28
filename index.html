@@ -885,7 +885,7 @@ function renderAssets() {
                 const avgTotal = a.avg_price * a.quantity;
                 const pnl = a.amount - avgTotal;
                 const pct = (pnl / avgTotal * 100).toFixed(2);
-                const color = pnl >= 0 ? 'var(--accent)' : 'var(--red)';
+                const color = pnl >= 0 ? 'var(--red)' : '#38bdf8';
                 const sign = pnl >= 0 ? '+' : '';
                 const curPrice = Math.round(a.amount / a.quantity);
                 return `<div style="font-size:11px;color:${color};">${sign}${Math.round(pnl).toLocaleString('ko-KR')}원 (${sign}${pct}%)</div>
