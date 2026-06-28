@@ -409,15 +409,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       </div>
       <div class="form-group">
         <label>현재 금액 (원)</label>
-        <input type="text" inputmode="numeric" id="f-amount" placeholder="0" class="num-input">
+        <input type="text" inputmode="numeric" id="f-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
       </div>
       <div class="form-group">
         <label>월 납입액 (원)</label>
-        <input type="text" inputmode="numeric" id="f-monthly" placeholder="0" class="num-input">
+        <input type="text" inputmode="numeric" id="f-monthly" placeholder="0" class="num-input" oninput="fmtNum(this)">
       </div>
       <div class="form-group">
         <label>이자율 (연 %)</label>
-        <input type="text" inputmode="decimal" id="f-rate" placeholder="0" class="num-input">
+        <input type="text" inputmode="decimal" id="f-rate" placeholder="0" class="num-input" oninput="fmtNum(this)">
       </div>
       <div class="form-group">
         <label>시작일</label>
@@ -891,8 +891,8 @@ async function saveAsset() {
     name,
     type: document.getElementById('f-type').value,
     status: document.getElementById('f-status').value,
-    amount: parseFloat(document.getElementById('f-amount').value) || 0,
-    monthly: parseFloat(document.getElementById('f-monthly').value) || 0,
+    amount: parseFloat((document.getElementById('f-amount').dataset.raw || document.getElementById('f-amount').value).replace(/,/g,'')) || 0,
+    monthly: parseFloat((document.getElementById('f-monthly').dataset.raw || document.getElementById('f-monthly').value).replace(/,/g,'')) || 0,
     rate: parseFloat(document.getElementById('f-rate').value) || 0,
     start: document.getElementById('f-start').value,
     maturity: document.getElementById('f-maturity').value,
@@ -1094,6 +1094,14 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   renderAssets();
   if (PROXY_BASE_URL) fetchPrices();
 })();
+
+function fmtNum(el) {
+  let v = el.value.replace(/[^0-9]/g, '');
+  v = v.replace(/^0+([0-9])/, '$1');
+  if (v === '') { el.value = ''; return; }
+  el.value = parseInt(v).toLocaleString('ko-KR');
+  el.dataset.raw = v;
+}
 </script>
 </body>
 </html>
