@@ -205,6 +205,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .empty .em-icon{font-size:36px;margin-bottom:12px;}
 .empty p{font-size:14px;}
 
+
+.asset-name { position: relative; }
+.asset-tooltip {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  color: var(--text-sub);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
+.asset-name:hover .asset-tooltip { display: block; }
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;z-index:300;transition:transform 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -839,12 +859,13 @@ function renderAssets() {
       <div class="asset-items">
         ${group.map(a => `
           <div class="asset-row">
-            <div class="asset-name">
-              ${a.name}
+            <div class="asset-name" style="position:relative;">
+              <span class="asset-name-text">${a.name}</span>
               ${a.status === '만기완료' ? '<span class="asset-badge red" style="margin-left:6px">만기완료</span>' : ''}
               ${a.status === '해지' ? '<span class="asset-badge red" style="margin-left:6px">해지</span>' : ''}
               ${a.maturity ? `<span class="asset-badge" style="margin-left:6px">만기 ${a.maturity}</span>` : ''}
               ${a.rate > 0 ? `<span class="asset-badge" style="margin-left:6px">연 ${a.rate}%</span>` : ''}
+              ${a.memo ? `<span class="asset-tooltip">${a.memo}</span>` : ''}
             </div>
             <div class="asset-amount">${W(a.amount)}</div>
             <div class="asset-actions">
