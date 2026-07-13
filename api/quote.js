@@ -27,44 +27,37 @@ const EXCD_MAP = { 'CLIK': 'NYS', 'TSLA': 'NAS', 'NKE': 'NYS' };
 
 async function getUSPrice(token, sym) {
   const excd = EXCD_MAP[sym] || 'NAS';
-  // 실시간 시도
+  const kisHeaders = {
+    'authorization': `Bearer ${token}`,
+    'appkey': KIS_APP_KEY,
+    'appsecret': KIS_APP_SECRET,
+    'custtype': 'P',
+    'Content-Type': 'application/json',
+  };
+
+  // 1. 실시간 시도
   try {
     const r = await fetch(
       `${KIS_BASE}/uapi/overseas-stock/v1/quotations/price?AUTH=&EXCD=${excd}&SYMB=${sym}`,
-      {
-        headers: {
-          'authorization': `Bearer ${token}`,
-          'appkey': KIS_APP_KEY,
-          'appsecret': KIS_APP_SECRET,
-          'tr_id': 'HHDFS00000300',
-          'custtype': 'P',
-        },
-      }
+      { headers: { ...kisHeaders, 'tr_id': 'HHDFS00000300' } }
     );
     const data = await r.json();
     const price = parseFloat(data?.output?.last);
     if (price && price > 0) return { price, currency: 'USD', name: sym, type: 'realtime' };
   } catch(e) {}
 
-  // 실시간 실패시 전일 종가 조회
-  const today = new Date();
-  const dateStr = today.toISOString().slice(0,10).replace(/-/g,'');
-  const r2 = await fetch(
-    `${KIS_BASE}/uapi/overseas-stock/v1/quotations/dailyprice?AUTH=&EXCD=${excd}&SYMB=${sym}&GUBN=0&BYMD=${dateStr}&MODP=0`,
-    {
-      headers: {
-        'authorization': `Bearer ${token}`,
-        'appkey': KIS_APP_KEY,
-        'appsecret': KIS_APP_SECRET,
-        'tr_id': 'HHDFS76240000',
-        'custtype': 'P',
-      },
-    }
-  );
-  const data2 = await r2.json();
-  const output = data2?.output2?.[0];
-  const price2 = parseFloat(output?.clos);
-  if (price2 && price2 > 0) return { price: price2, currency: 'USD', name: sym, type: 'close' };
+  // 2. 전일 종가 시도 (Yahoo Finance 폴백)
+  try {
+    const yUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=5d`;
+    const yr = await fetch(yUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }
+    });
+    const yData = await yr.json();
+    const closes = yData?.chart?.result?.[0]?.indicators?.quote?.[0]?.close;
+    const price = closes?.filter(Boolean).slice(-1)[0];
+    if (price && price > 0) return { price, currency: 'USD', name: sym, type: 'close' };
+  } catch(e) {}
+
   return null;
 }
 
@@ -103,7 +96,7 @@ export default async function handler(req, res) {
           );
           const data = await r.json();
           const price = parseInt(data?.output?.stck_prpr);
-          const name = data?.output?.hts_kor_isnm || sym;
+          const name = data?.output?.hts_kor_isnm || code;
           if (price && price > 0) result[sym] = { price, currency: 'KRW', name, type: 'realtime' };
         }
       } catch(e) {
