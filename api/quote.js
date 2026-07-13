@@ -74,7 +74,7 @@ export default async function handler(req, res) {
           );
           const data = await r.json();
           const price = parseInt(data?.output?.stck_prpr);
-          if (price) result[sym] = { price, currency: 'KRW', name: data?.output?.hts_kor_isnm || code };
+          if (price) result[sym] = { price, currency: 'KRW', name: data?.output?.hts_kor_isnm || sym };
         }
       } catch(e) {
         console.error(sym, e.message);
