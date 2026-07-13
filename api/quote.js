@@ -23,6 +23,13 @@ async function getToken() {
 }
 
 const US_TICKERS = new Set(['TSLA', 'NKE', 'CLIK']);
+const KR_NAME_MAP = {
+  '005930': '삼성전자',
+  '000660': 'SK하이닉스',
+  '323410': '카카오뱅크',
+  '001440': '대한전선',
+  '069500': 'KODEX 200',
+};
 const EXCD_MAP = { 'CLIK': 'NYS', 'TSLA': 'NAS', 'NKE': 'NYS' };
 
 async function getUSPrice(token, sym) {
@@ -96,7 +103,7 @@ export default async function handler(req, res) {
           );
           const data = await r.json();
           const price = parseInt(data?.output?.stck_prpr);
-          const name = data?.output?.hts_kor_isnm || code;
+          const name = data?.output?.hts_kor_isnm || KR_NAME_MAP[code] || code;
           if (price && price > 0) result[sym] = { price, currency: 'KRW', name, type: 'realtime' };
         }
       } catch(e) {
