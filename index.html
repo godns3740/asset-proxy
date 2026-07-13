@@ -953,8 +953,11 @@ async function saveAsset() {
   };
   closeModal();
   try {
-    if (editingId) {
-      const updated = { ...assets.find(a => a.id === editingId), ...data };
+    console.log('editingId:', editingId, 'data:', data);
+  if (editingId) {
+      const original = assets.find(a => a.id === editingId);
+      if (!original) { showToast('자산을 찾을 수 없어요'); return; }
+      const updated = { ...original, ...data, id: editingId };
       await dbUpdateAsset(updated);
       const idx = assets.findIndex(a => a.id === editingId);
       assets[idx] = updated;
@@ -1145,7 +1148,10 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   await loadAssets();
   renderDashboard();
   renderAssets();
-  if (PROXY_BASE_URL) fetchPrices();
+  if (PROXY_BASE_URL) {
+  fetchPrices();
+  setInterval(fetchPrices, 5 * 60 * 1000); // 5분마다 자동 갱신
+}
 })();
 
 
