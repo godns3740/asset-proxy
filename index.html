@@ -1589,8 +1589,10 @@ async function deleteFixed(id) {
   await renderBudgetPage();
 }
 
-document.getElementById('tx-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeTxModal(); });
-document.getElementById('fixed-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeFixedModal(); });
+const txModalBg = document.getElementById('tx-modal-bg');
+const fixedModalBg = document.getElementById('fixed-modal-bg');
+if (txModalBg) txModalBg.addEventListener('click', function(e) { if(e.target===this) closeTxModal(); });
+if (fixedModalBg) fixedModalBg.addEventListener('click', function(e) { if(e.target===this) closeFixedModal(); });
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function handleRefresh() {
