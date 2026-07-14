@@ -19,8 +19,10 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const { month } = req.query;
+      const { start, end } = req.query;
       let url = `${base}?order=date.desc`;
-      if (month) url += `&date=gte.${month}-01&date=lte.${month}-31`;
+      if (start && end) url += `&date=gte.${start}&date=lte.${end}`;
+      else if (req.query.month) url += `&date=gte.${req.query.month}-01&date=lte.${req.query.month}-31`;
       const r = await fetch(url, { headers });
       return res.status(200).json(await r.json());
     }
