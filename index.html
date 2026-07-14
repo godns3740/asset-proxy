@@ -536,6 +536,33 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     </div>
   </div>
 <!-- MODAL -->
+  <!-- 고정지출 추가/수정 모달 -->
+  <div class="modal-bg" id="fixed-modal-bg">
+    <div class="modal">
+      <h3 id="fixed-modal-title">고정지출 추가</h3>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label>항목명</label>
+          <input type="text" id="fx-name" placeholder="예: 넷플릭스">
+        </div>
+        <div class="form-group">
+          <label>금액 (원)</label>
+          <input type="text" inputmode="numeric" id="fx-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        </div>
+        <div class="form-group">
+          <label>카테고리</label>
+          <select id="fx-category" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;">
+            <option>구독</option><option>관리비</option><option>교통</option><option>통신</option>
+            <option>대출</option><option>저축</option><option>기타</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeFixedModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveFixed()">저장</button>
+      </div>
+    </div>
+  </div>
 <div class="modal-bg" id="modal-bg">
   <div class="modal">
     <h3 id="modal-title">자산 추가</h3>
@@ -1700,8 +1727,10 @@ async function deleteFixed(id) {
   await renderBudgetPage();
 }
 
-document.getElementById('tx-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeTxModal(); });
-document.getElementById('fixed-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeFixedModal(); });
+const _txBg = document.getElementById('tx-modal-bg');
+const _fxBg = document.getElementById('fixed-modal-bg');
+if (_txBg) _txBg.addEventListener('click', function(e) { if(e.target===this) closeTxModal(); });
+if (_fxBg) _fxBg.addEventListener('click', function(e) { if(e.target===this) closeFixedModal(); });
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function handleRefresh() {
