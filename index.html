@@ -510,6 +510,48 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 <!-- MODAL -->
   <!-- 거래 추가/수정 모달 -->
+  <!-- 자산 추가/수정 모달 -->
+  <div class="modal-bg" id="modal-bg">
+    <div class="modal">
+      <h3 id="modal-title">자산 추가</h3>
+      <div class="form-grid">
+        <div class="form-group form-full"><label>자산명</label><input type="text" id="f-name" placeholder="예: 신한 정기적금"></div>
+        <div class="form-group"><label>종류</label>
+          <select id="f-type">
+            <option value="현금">현금</option><option value="국내주식">국내주식</option>
+            <option value="해외주식">해외주식</option><option value="적금">적금</option>
+            <option value="퇴직연금">퇴직연금</option><option value="전세">전세</option><option value="기타">기타</option>
+          </select>
+        </div>
+        <div class="form-group"><label>상태</label>
+          <select id="f-status"><option value="운용중">운용중</option><option value="만기완료">만기완료</option><option value="해지">해지</option></select>
+        </div>
+        <div class="form-group"><label>현재 금액 (원)</label>
+          <input type="text" inputmode="numeric" id="f-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        </div>
+        <div class="form-group"><label>월 납입액 (원)</label>
+          <input type="text" inputmode="numeric" id="f-monthly" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        </div>
+        <div class="form-group"><label>이자율 (연 %)</label>
+          <input type="text" inputmode="decimal" id="f-rate" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        </div>
+        <div class="form-group"><label>시작일</label><input type="date" id="f-start"></div>
+        <div class="form-group"><label>만기일</label><input type="date" id="f-maturity"></div>
+        <div class="form-group form-full"><label>메모</label><input type="text" id="f-memo" placeholder="메모"></div>
+        <div class="form-group" id="f-avgprice-group"><label>평균단가 (원)</label>
+          <input type="text" inputmode="numeric" id="f-avgprice" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        </div>
+        <div class="form-group" id="f-quantity-group"><label>보유수량</label>
+          <input type="text" inputmode="decimal" id="f-quantity" placeholder="0">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveAsset()">저장</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-bg" id="tx-modal-bg">
     <div class="modal">
       <h3 id="tx-modal-title">거래 추가</h3>
@@ -1794,9 +1836,8 @@ async function handleRefresh() {
   if (st) st.textContent = `마지막 업데이트: ${new Date().toLocaleTimeString('ko-KR')}`;
 }
 
-document.getElementById('modal-bg').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
+const _modalBg = document.getElementById('modal-bg');
+if (_modalBg) _modalBg.addEventListener('click', function(e) { if(e.target===this) closeModal(); });
 
 // 숫자 입력 필드: 숫자와 소수점만 허용, 앞자리 0 제거
 document.querySelectorAll('.num-input').forEach(input => {
