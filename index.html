@@ -205,26 +205,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .empty .em-icon{font-size:36px;margin-bottom:12px;}
 .empty p{font-size:14px;}
 
-
-.asset-name { position: relative; }
-.asset-tooltip {
-  display: none;
-  position: absolute;
-  left: 0;
-  top: calc(100% + 6px);
-  background: var(--surface3);
-  border: 1px solid var(--border2);
-  color: var(--text-sub);
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  white-space: nowrap;
-  z-index: 50;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  pointer-events: none;
-}
-.asset-name:hover .asset-tooltip { display: block; }
-
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;z-index:300;transition:transform 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -409,7 +389,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       </div>
       <div class="form-group">
         <label>종류</label>
-        <select id="f-type" onchange="toggleStockFields(this.value)">
+        <select id="f-type">
           <option value="현금">현금</option>
           <option value="국내주식">국내주식</option>
           <option value="해외주식">해외주식</option>
@@ -429,15 +409,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       </div>
       <div class="form-group">
         <label>현재 금액 (원)</label>
-        <input type="text" inputmode="numeric" id="f-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        <input type="number" id="f-amount" placeholder="0">
       </div>
       <div class="form-group">
         <label>월 납입액 (원)</label>
-        <input type="text" inputmode="numeric" id="f-monthly" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        <input type="number" id="f-monthly" placeholder="0">
       </div>
       <div class="form-group">
         <label>이자율 (연 %)</label>
-        <input type="text" inputmode="decimal" id="f-rate" placeholder="0" class="num-input" oninput="fmtNum(this)">
+        <input type="number" id="f-rate" placeholder="0" step="0.1">
       </div>
       <div class="form-group">
         <label>시작일</label>
@@ -446,14 +426,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <div class="form-group">
         <label>만기일</label>
         <input type="date" id="f-maturity">
-      </div>
-      <div class="form-group" id="f-avgprice-group">
-        <label>평균단가 (원)</label>
-        <input type="text" inputmode="numeric" id="f-avgprice" placeholder="0" class="num-input" oninput="fmtNum(this)">
-      </div>
-      <div class="form-group" id="f-quantity-group">
-        <label>보유수량</label>
-        <input type="text" inputmode="decimal" id="f-quantity" placeholder="0">
       </div>
       <div class="form-group form-full">
         <label>메모</label>
@@ -555,8 +527,6 @@ function dbToAsset(row) {
     start: row.start_date || '',
     maturity: row.maturity || '',
     memo: row.memo || '',
-    avg_price: Number(row.avg_price || 0),
-    quantity: Number(row.quantity || 0),
   };
 }
 function assetToDb(a) {
@@ -570,8 +540,6 @@ function assetToDb(a) {
     start_date: a.start || null,
     maturity: a.maturity || null,
     memo: a.memo || '',
-    avg_price: a.avg_price || 0,
-    quantity: a.quantity || 0,
   };
 }
 
@@ -871,27 +839,14 @@ function renderAssets() {
       <div class="asset-items">
         ${group.map(a => `
           <div class="asset-row">
-            <div class="asset-name" style="position:relative;">
-              <span class="asset-name-text">${a.name}</span>
+            <div class="asset-name">
+              ${a.name}
               ${a.status === '만기완료' ? '<span class="asset-badge red" style="margin-left:6px">만기완료</span>' : ''}
               ${a.status === '해지' ? '<span class="asset-badge red" style="margin-left:6px">해지</span>' : ''}
               ${a.maturity ? `<span class="asset-badge" style="margin-left:6px">만기 ${a.maturity}</span>` : ''}
               ${a.rate > 0 ? `<span class="asset-badge" style="margin-left:6px">연 ${a.rate}%</span>` : ''}
-              ${a.memo ? `<span class="asset-tooltip">${a.memo}</span>` : ''}
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
-              <div class="asset-amount">${W(a.amount)}</div>
-              ${(a.avg_price > 0 && a.quantity > 0) ? (() => {
-                const avgTotal = a.avg_price * a.quantity;
-                const pnl = a.amount - avgTotal;
-                const pct = (pnl / avgTotal * 100).toFixed(2);
-                const color = pnl >= 0 ? 'var(--red)' : '#38bdf8';
-                const sign = pnl >= 0 ? '+' : '';
-                const curPrice = Math.round(a.amount / a.quantity);
-                return `<div style="font-size:11px;color:${color};">${sign}${Math.round(pnl).toLocaleString('ko-KR')}원 (${sign}${pct}%)</div>
-                        <div style="font-size:11px;color:var(--text-muted);">1주 ${curPrice.toLocaleString('ko-KR')}원 · 평균 ${a.avg_price.toLocaleString('ko-KR')}원</div>`;
-              })() : ''}
-            </div>
+            <div class="asset-amount">${W(a.amount)}</div>
             <div class="asset-actions">
               <button class="btn-icon" onclick="openModal(${a.id})">수정</button>
               <button class="btn-icon del" onclick="deleteAsset(${a.id})">삭제</button>
@@ -917,15 +872,9 @@ function openModal(id = null) {
     document.getElementById('f-start').value = a.start;
     document.getElementById('f-maturity').value = a.maturity;
     document.getElementById('f-memo').value = a.memo;
-    document.getElementById('f-avgprice').value = a.avg_price > 0 ? a.avg_price.toLocaleString('ko-KR') : '';
-    document.getElementById('f-quantity').value = a.quantity || '';
-    toggleStockFields(a.type);
   } else {
     ['f-name','f-start','f-maturity','f-memo'].forEach(id => document.getElementById(id).value = '');
     ['f-amount','f-monthly','f-rate'].forEach(id => document.getElementById(id).value = 0);
-    document.getElementById('f-avgprice').value = '';
-    document.getElementById('f-quantity').value = '';
-    toggleStockFields('현금');
     document.getElementById('f-type').value = '현금';
     document.getElementById('f-status').value = '운용중';
   }
@@ -942,22 +891,17 @@ async function saveAsset() {
     name,
     type: document.getElementById('f-type').value,
     status: document.getElementById('f-status').value,
-    amount: parseFloat((document.getElementById('f-amount').dataset.raw || document.getElementById('f-amount').value).replace(/,/g,'')) || 0,
-    monthly: parseFloat((document.getElementById('f-monthly').dataset.raw || document.getElementById('f-monthly').value).replace(/,/g,'')) || 0,
+    amount: parseFloat(document.getElementById('f-amount').value) || 0,
+    monthly: parseFloat(document.getElementById('f-monthly').value) || 0,
     rate: parseFloat(document.getElementById('f-rate').value) || 0,
     start: document.getElementById('f-start').value,
     maturity: document.getElementById('f-maturity').value,
     memo: document.getElementById('f-memo').value,
-    avg_price: parseFloat((document.getElementById('f-avgprice').dataset.raw || document.getElementById('f-avgprice').value || '0').replace(/,/g,'')) || 0,
-    quantity: parseFloat(document.getElementById('f-quantity').value) || 0,
   };
   closeModal();
   try {
-    console.log('editingId:', editingId, 'data:', data);
-  if (editingId) {
-      const original = assets.find(a => a.id === editingId);
-      if (!original) { showToast('자산을 찾을 수 없어요'); return; }
-      const updated = { ...original, ...data, id: editingId };
+    if (editingId) {
+      const updated = { ...assets.find(a => a.id === editingId), ...data };
       await dbUpdateAsset(updated);
       const idx = assets.findIndex(a => a.id === editingId);
       assets[idx] = updated;
@@ -1148,26 +1092,8 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   await loadAssets();
   renderDashboard();
   renderAssets();
-  if (PROXY_BASE_URL) {
-  fetchPrices();
-  setInterval(fetchPrices, 5 * 60 * 1000); // 5분마다 자동 갱신
-}
+  if (PROXY_BASE_URL) fetchPrices();
 })();
-
-
-function toggleStockFields(type) {
-  const isStock = ['국내주식','해외주식'].includes(type);
-  document.getElementById('f-avgprice-group').style.display = isStock ? '' : 'none';
-  document.getElementById('f-quantity-group').style.display = isStock ? '' : 'none';
-}
-
-function fmtNum(el) {
-  let v = el.value.replace(/[^0-9]/g, '');
-  v = v.replace(/^0+([0-9])/, '$1');
-  if (v === '') { el.value = ''; return; }
-  el.value = parseInt(v).toLocaleString('ko-KR');
-  el.dataset.raw = v;
-}
 </script>
 </body>
 </html>
