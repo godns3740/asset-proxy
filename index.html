@@ -1587,10 +1587,15 @@ function renderCalendar() {
 }
 
 function showDayDetail(dateStr) {
-  const txs = transactions.filter(t => t.date === dateStr && t.type === '지출');
-  const total = txs.reduce((s,t) => s+t.amount, 0);
-  const list = txs.map(t => '• ' + (t.memo||t.category) + ': ' + W(t.amount)).join('\n');
-  alert(dateStr + ' 지출\n총 ' + W(total) + '\n\n' + list);
+  switchBudgetTab('transactions');
+  switchTxView('list');
+  const txList = document.getElementById('b-tx-list');
+  if (!txList) return;
+  const CAT_COLORS_TX2 = {'생활비':'#94a3b8','고정지출':'#38bdf8','저축':'#4ade80','투자':'#fbbf24','배달-점심':'#fb923c','배달-저녁':'#f97316','외식':'#f59e0b','커피/간식':'#a78bfa','미용/쇼핑':'#f472b6','오락':'#c084fc','술약속':'#818cf8','데이트-통장':'#fb7185','데이트-선물':'#f43f5e','데이트-식비':'#e879f9','데이트-오락':'#d946ef','기타':'#6b7280','기타수입':'#4ade80','월급':'#4ade80','부수입':'#22d3ee'};
+  const txs = transactions.filter(t => t.date === dateStr);
+  const total = txs.filter(t=>t.type==='지출').reduce((s,t)=>s+t.amount,0);
+  txList.innerHTML = '<div style="padding:10px 22px;background:var(--surface2);font-size:13px;color:var(--text-muted);">' + dateStr + ' 지출 합계: <strong style="color:var(--text)">' + W(total) + '</strong></div>' +
+    txs.map(t => '<div class="asset-row"><div style="display:flex;align-items:center;gap:8px;flex:1;"><div style="width:8px;height:8px;border-radius:50%;background:' + (CAT_COLORS_TX2[t.category]||'#6b7280') + ';flex-shrink:0;"></div><div><div style="font-size:13px;">' + (t.memo||t.category) + '</div><div style="font-size:11px;color:var(--text-muted);">' + t.category + (t.payment?' · '+t.payment:'') + '</div></div></div><div style="font-size:13px;font-weight:500;color:' + (t.type==='수입'?'var(--accent)':'var(--text)') + ';">' + (t.type==='수입'?'+':'-') + W(t.amount) + '</div></div>').join('');
 }
 
 // 거래 모달
