@@ -205,6 +205,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .empty .em-icon{font-size:36px;margin-bottom:12px;}
 .empty p{font-size:14px;}
 
+.budget-tab {
+  background: none; border: none; color: var(--text-muted); font-family: inherit;
+  font-size: 13px; font-weight: 500; padding: 14px 16px; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.15s;
+}
+.budget-tab:hover { color: var(--text); }
+.budget-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.budget-tab-content { animation: fadeIn 0.15s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+@media(max-width:900px) {
+  #page-budget > div { grid-template-columns: 1fr !important; }
+  #page-budget > div > div:first-child { display: none; }
+}
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;z-index:300;transition:transform 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -380,197 +393,131 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 </main>
 
   <!-- 가계부 -->
-  <div class="page" id="page-budget">
-    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
-      <div>
-        <h1>가계부</h1>
-        <p id="budget-period-label">월급 기준 사이클로 관리해요</p>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <select id="budget-month" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:9px;font-size:14px;font-family:inherit;">
-        </select>
-        <button class="btn btn-ghost" onclick="openTxModal(null,'수입')">+ 수입</button>
-        <button class="btn btn-primary" onclick="openTxModal(null,'지출')">+ 지출</button>
-      </div>
-    </div>
+  <div class="page" id="page-budget" style="padding:0;max-width:none;">
+    <div style="display:grid;grid-template-columns:200px 1fr;height:calc(100vh - 0px);overflow:hidden;">
 
-    <!-- 요약 카드 -->
-    <div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:20px;">
-      <div class="card accent">
-        <div class="label">이번달 수입</div>
-        <div class="value" id="b-income">—</div>
-        <div class="sub" id="b-income-sub"></div>
+      <!-- 월별 사이드 패널 -->
+      <div style="background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;">
+        <div style="padding:16px 16px 10px;border-bottom:1px solid var(--border);">
+          <div style="font-size:11px;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;">월별 기록</div>
+          <button class="btn btn-primary" style="width:100%;font-size:13px;" onclick="openTxModal(null,'지출')">+ 지출 추가</button>
+          <button class="btn btn-ghost" style="width:100%;font-size:13px;margin-top:6px;" onclick="openTxModal(null,'수입')">+ 수입 추가</button>
+        </div>
+        <div id="budget-month-list" style="flex:1;padding:8px 0;"></div>
       </div>
-      <div class="card">
-        <div class="label">고정지출</div>
-        <div class="value" id="b-fixed">—</div>
-        <div class="sub">매달 나가는 돈</div>
-      </div>
-      <div class="card">
-        <div class="label">사용 가능</div>
-        <div class="value" id="b-usable">—</div>
-        <div class="sub">수입 - 고정지출</div>
-      </div>
-      <div class="card">
-        <div class="label">변동지출</div>
-        <div class="value" id="b-variable">—</div>
-        <div class="sub" id="b-variable-sub"></div>
-      </div>
-      <div class="card">
-        <div class="label">남은 돈</div>
-        <div class="value" id="b-remain">—</div>
-        <div class="sub" id="b-remain-sub"></div>
-      </div>
-    </div>
 
-    <!-- 예산 바 -->
-    <div class="box" style="margin-bottom:20px;">
-      <div class="box-head"><h2>지출 현황</h2></div>
-      <div class="box-body" style="display:flex;flex-direction:column;gap:14px;">
-        <div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-            <span style="color:var(--text-sub)">변동지출 / 사용가능</span>
-            <span id="b-var-label" style="font-weight:500;"></span>
+      <!-- 우측 메인 -->
+      <div style="display:flex;flex-direction:column;overflow:hidden;">
+        <!-- 상단 탭 -->
+        <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+          <div style="display:flex;">
+            <button class="budget-tab active" data-tab="overview" onclick="switchBudgetTab('overview')">📊 대시보드</button>
+            <button class="budget-tab" data-tab="transactions" onclick="switchBudgetTab('transactions')">📋 사용내역</button>
+            <button class="budget-tab" data-tab="fixed" onclick="switchBudgetTab('fixed')">📌 고정지출</button>
           </div>
-          <div class="liq-bg"><div id="b-var-bar" class="liq-fill" style="width:0%;"></div></div>
+          <div id="budget-period-label" style="font-size:12px;color:var(--text-muted);padding:12px 0;"></div>
         </div>
-        <div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-            <span style="color:var(--text-sub)">전체지출 / 수입</span>
-            <span id="b-total-label" style="font-weight:500;"></span>
+
+        <!-- 탭 컨텐츠 -->
+        <div style="flex:1;overflow-y:auto;padding:24px;">
+
+          <!-- 대시보드 탭 -->
+          <div id="budget-tab-overview" class="budget-tab-content">
+            <div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:20px;">
+              <div class="card accent">
+                <div class="label">수입</div>
+                <div class="value" id="b-income" style="font-size:18px;">—</div>
+                <div class="sub" id="b-income-sub"></div>
+              </div>
+              <div class="card">
+                <div class="label">고정지출</div>
+                <div class="value" id="b-fixed" style="font-size:18px;">—</div>
+                <div class="sub">매달 나가는 돈</div>
+              </div>
+              <div class="card">
+                <div class="label">사용 가능</div>
+                <div class="value" id="b-usable" style="font-size:18px;">—</div>
+                <div class="sub">수입 - 고정지출</div>
+              </div>
+              <div class="card">
+                <div class="label">변동지출</div>
+                <div class="value" id="b-variable" style="font-size:18px;">—</div>
+                <div class="sub" id="b-variable-sub"></div>
+              </div>
+              <div class="card">
+                <div class="label">남은 돈</div>
+                <div class="value" id="b-remain" style="font-size:18px;">—</div>
+                <div class="sub" id="b-remain-sub"></div>
+              </div>
+            </div>
+
+            <!-- 바 그래프 -->
+            <div class="box" style="margin-bottom:20px;">
+              <div class="box-head"><h2>지출 현황</h2></div>
+              <div class="box-body" style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+                    <span style="color:var(--text-sub)">변동지출 / 사용가능</span>
+                    <span id="b-var-label" style="font-weight:500;"></span>
+                  </div>
+                  <div class="liq-bg"><div id="b-var-bar" class="liq-fill" style="width:0%;"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
+                    <span style="color:var(--text-sub)">전체지출 / 수입</span>
+                    <span id="b-total-label" style="font-weight:500;"></span>
+                  </div>
+                  <div class="liq-bg"><div id="b-total-bar" class="liq-fill" style="width:0%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="g2">
+              <div class="box">
+                <div class="box-head"><h2>카테고리별 지출</h2></div>
+                <div class="donut-wrap">
+                  <svg class="donut" viewBox="0 0 150 150" id="b-donut"></svg>
+                  <div style="width:100%" id="b-cat-legend"></div>
+                </div>
+              </div>
+              <div class="box">
+                <div class="box-head"><h2>💡 절약 인사이트</h2></div>
+                <div class="box-body" id="b-insights"></div>
+              </div>
+            </div>
           </div>
-          <div class="liq-bg"><div id="b-total-bar" class="liq-fill" style="width:0%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="g2" style="margin-bottom:20px;">
-      <!-- 카테고리별 지출 -->
-      <div class="box">
-        <div class="box-head"><h2>카테고리별 지출</h2></div>
-        <div class="donut-wrap">
-          <svg class="donut" viewBox="0 0 150 150" id="b-donut"></svg>
-          <div style="width:100%" id="b-cat-legend"></div>
-        </div>
-      </div>
+          <!-- 사용내역 탭 -->
+          <div id="budget-tab-transactions" class="budget-tab-content" style="display:none;">
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+              <select id="b-filter-type" onchange="renderBudget()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:inherit;">
+                <option value="">전체</option><option value="수입">수입</option><option value="지출">지출</option>
+              </select>
+              <select id="b-filter-cat" onchange="renderBudget()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:inherit;">
+                <option value="">전체 카테고리</option>
+                <option>생활비</option><option>고정지출</option><option>저축</option><option>투자</option>
+                <option>배달-점심</option><option>배달-저녁</option><option>외식</option><option>커피/간식</option>
+                <option>미용/쇼핑</option><option>오락</option><option>술약속</option>
+                <option>데이트-통장</option><option>데이트-선물</option><option>데이트-식비</option><option>데이트-오락</option>
+                <option>기타</option><option>기타수입</option><option>월급</option><option>부수입</option>
+              </select>
+            </div>
+            <div class="box"><div id="b-tx-list"></div></div>
+          </div>
 
-      <!-- 절약 인사이트 -->
-      <div class="box">
-        <div class="box-head"><h2>💡 절약 인사이트</h2></div>
-        <div class="box-body" id="b-insights" style="display:flex;flex-direction:column;gap:0;"></div>
-      </div>
-    </div>
+          <!-- 고정지출 탭 -->
+          <div id="budget-tab-fixed" class="budget-tab-content" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <div>
+                <div style="font-size:13px;color:var(--text-sub);">매달 자동으로 나가는 고정지출을 관리해요</div>
+                <div style="font-size:20px;font-weight:600;color:var(--red);margin-top:4px;" id="b-fixed-total">—</div>
+              </div>
+              <button class="btn btn-primary" onclick="openFixedModal()">+ 추가</button>
+            </div>
+            <div class="box"><div id="b-fixed-list"></div></div>
+          </div>
 
-    <!-- 고정지출 관리 -->
-    <div class="box" style="margin-bottom:20px;">
-      <div class="box-head">
-        <h2>📌 고정지출 관리</h2>
-        <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px;" onclick="openFixedModal()">+ 추가</button>
-      </div>
-      <div id="b-fixed-list"></div>
-    </div>
-
-    <!-- 거래 내역 -->
-    <div class="box">
-      <div class="box-head">
-        <h2>거래 내역</h2>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <select id="b-filter-type" onchange="renderBudget()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:12px;font-family:inherit;">
-            <option value="">전체</option>
-            <option value="수입">수입</option>
-            <option value="지출">지출</option>
-          </select>
-          <select id="b-filter-cat" onchange="renderBudget()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:6px;font-size:12px;font-family:inherit;">
-            <option value="">전체 카테고리</option>
-            <option>생활비</option><option>고정지출</option><option>저축</option><option>투자</option>
-            <option>배달-점심</option><option>배달-저녁</option><option>외식</option><option>커피/간식</option>
-            <option>미용/쇼핑</option><option>오락</option><option>술약속</option>
-            <option>데이트-통장</option><option>데이트-선물</option><option>데이트-식비</option><option>데이트-오락</option>
-            <option>기타</option><option>기타수입</option>
-          </select>
         </div>
-      </div>
-      <div id="b-tx-list"></div>
-    </div>
-  </div>
-
-  <!-- 거래 추가/수정 모달 -->
-  <div class="modal-bg" id="tx-modal-bg">
-    <div class="modal">
-      <h3 id="tx-modal-title">거래 추가</h3>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>날짜</label>
-          <input type="date" id="t-date">
-        </div>
-        <div class="form-group">
-          <label>수입/지출</label>
-          <select id="t-type">
-            <option value="지출">지출</option>
-            <option value="수입">수입</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>카테고리</label>
-          <select id="t-category">
-            <option>생활비</option><option>고정지출</option><option>저축</option><option>투자</option>
-            <option>배달-점심</option><option>배달-저녁</option><option>외식</option><option>커피/간식</option>
-            <option>미용/쇼핑</option><option>오락</option><option>술약속</option>
-            <option>데이트-통장</option><option>데이트-선물</option><option>데이트-식비</option><option>데이트-오락</option>
-            <option>월급</option><option>부수입</option><option>기타수입</option><option>기타</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>결제수단</label>
-          <select id="t-payment">
-            <option>계좌이체</option><option>체크카드</option><option>신용카드</option>
-            <option>카카오페이</option><option>토스</option><option>신한</option>
-          </select>
-        </div>
-        <div class="form-group form-full">
-          <label>내역명</label>
-          <input type="text" id="t-memo" placeholder="예: 스타벅스 아메리카노">
-        </div>
-        <div class="form-group form-full">
-          <label>금액 (원)</label>
-          <input type="text" inputmode="numeric" id="t-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group form-full" style="display:flex;align-items:center;gap:10px;">
-          <input type="checkbox" id="t-fixed" style="width:16px;height:16px;cursor:pointer;">
-          <label for="t-fixed" style="font-size:13px;color:var(--text-sub);cursor:pointer;">고정지출 (매달 반복)</label>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeTxModal()">취소</button>
-        <button class="btn btn-primary" onclick="saveTx()">저장</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 고정지출 추가/수정 모달 -->
-  <div class="modal-bg" id="fixed-modal-bg">
-    <div class="modal">
-      <h3 id="fixed-modal-title">고정지출 추가</h3>
-      <div class="form-grid">
-        <div class="form-group form-full">
-          <label>항목명</label>
-          <input type="text" id="fx-name" placeholder="예: 넷플릭스">
-        </div>
-        <div class="form-group">
-          <label>금액 (원)</label>
-          <input type="text" inputmode="numeric" id="fx-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group">
-          <label>카테고리</label>
-          <select id="fx-category" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;">
-            <option>구독</option><option>관리비</option><option>교통</option><option>통신</option>
-            <option>대출</option><option>저축</option><option>기타</option>
-          </select>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeFixedModal()">취소</button>
-        <button class="btn btn-primary" onclick="saveFixed()">저장</button>
       </div>
     </div>
   </div>
@@ -1264,6 +1211,14 @@ function showToast(msg, success = false) {
 
 
 // ─── BUDGET / TRANSACTIONS ────────────────────────────────────
+function switchBudgetTab(tab) {
+  document.querySelectorAll('.budget-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.budget-tab-content').forEach(t => t.style.display = 'none');
+  document.querySelector(`.budget-tab[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`budget-tab-${tab}`).style.display = 'block';
+}
+
+// ─── BUDGET / TRANSACTIONS ────────────────────────────────────
 let transactions = [];
 let fixedExpenses = [];
 let editingTxId = null;
@@ -1308,11 +1263,10 @@ function getCycleRange(monthVal) {
 async function loadTransactions(monthVal) {
   try {
     const { start, end } = getCycleRange(monthVal);
-    const r = await fetch(`${PROXY_BASE_URL}/api/transactions?month=${monthVal}`);
+    const r = await fetch(`${PROXY_BASE_URL}/api/transactions?start=${start}&end=${end}`);
     let all = await r.json();
     if (!Array.isArray(all)) all = [];
-    // 날짜 필터 (전달 25일 ~ 이번달 24일)
-    transactions = all.filter(t => t.date >= start && t.date <= end);
+    transactions = all;
   } catch(e) { transactions = []; }
 }
 
@@ -1348,9 +1302,13 @@ function calcBudgetStats() {
   return { income, fixedTotal, usable, variable, fixedSpent, totalExpense, remain, byCat, filtered };
 }
 
-function renderBudget() {
+function renderBudget(monthVal) {
+  if (!monthVal) monthVal = getBudgetCycles().slice(-1)[0]?.value || '';
+  // 월별 사이드 남은돈 업데이트
+  const { remain } = calcBudgetStats();
+  const remainEl = document.querySelector(`.month-remain-${monthVal}`);
+  if (remainEl) remainEl.textContent = remain >= 0 ? `남은돈 ${W(remain)}` : `초과 ${W(Math.abs(remain))}`;
   const { income, fixedTotal, usable, variable, totalExpense, remain, byCat, filtered } = calcBudgetStats();
-  const monthVal = document.getElementById('budget-month')?.value || '';
   const { start, end } = getCycleRange(monthVal);
 
   // 기간 표시
@@ -1483,11 +1441,49 @@ function renderBudget() {
   }).join('');
 }
 
+function renderMonthList(currentMonth) {
+  const list = document.getElementById('budget-month-list');
+  if (!list) return;
+  const cycles = getBudgetCycles();
+  list.innerHTML = cycles.reverse().map(cycle => {
+    const isActive = cycle.value === currentMonth;
+    return `<div class="budget-month-item ${isActive?'active':''}" onclick="selectBudgetMonth('${cycle.value}')" style="padding:12px 16px;cursor:pointer;border-left:2px solid ${isActive?'var(--accent)':'transparent'};background:${isActive?'var(--accent-dim)':'transparent'};transition:all 0.15s;">
+      <div style="font-size:13px;font-weight:${isActive?'600':'400'};color:${isActive?'var(--accent)':'var(--text-sub)'};">${cycle.label}</div>
+      <div class="month-remain-${cycle.value}" style="font-size:11px;color:var(--text-muted);margin-top:2px;">로딩 중...</div>
+    </div>`;
+  }).join('');
+}
+
+async function selectBudgetMonth(monthVal) {
+  document.querySelectorAll('.budget-month-item').forEach(el => {
+    el.style.borderLeftColor = 'transparent';
+    el.style.background = 'transparent';
+    el.querySelector('div').style.color = 'var(--text-sub)';
+    el.querySelector('div').style.fontWeight = '400';
+  });
+  const active = document.querySelector(`.budget-month-item[onclick*="${monthVal}"]`);
+  if (active) {
+    active.style.borderLeftColor = 'var(--accent)';
+    active.style.background = 'var(--accent-dim)';
+    active.querySelector('div').style.color = 'var(--accent)';
+    active.querySelector('div').style.fontWeight = '600';
+  }
+  await loadTransactions(monthVal);
+  await loadFixedExpenses();
+  renderBudget(monthVal);
+}
+
 async function renderBudgetPage() {
-  const month = document.getElementById('budget-month')?.value;
-  if (!month) return;
+  const cycles = getBudgetCycles();
+  const now = new Date();
+  const curM = now.getDate() >= 25
+    ? new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    : now;
+  const defaultMonth = curM.getFullYear() + '-' + String(curM.getMonth()+1).padStart(2,'0');
+  const month = defaultMonth;
+  renderMonthList(month);
   await Promise.all([loadTransactions(month), loadFixedExpenses()]);
-  renderBudget();
+  renderBudget(month);
 }
 
 // 거래 모달
@@ -1594,7 +1590,6 @@ async function deleteFixed(id) {
 
 document.getElementById('tx-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeTxModal(); });
 document.getElementById('fixed-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeFixedModal(); });
-document.getElementById('budget-month').addEventListener('change', renderBudgetPage);
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function handleRefresh() {
@@ -1630,7 +1625,7 @@ document.querySelectorAll('.num-input').forEach(input => {
 
 const d = new Date();
 document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-initBudgetMonthSelect();
+
 
 // 앱 시작
 (async () => {
