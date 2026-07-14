@@ -1304,6 +1304,31 @@ function calcBudgetStats() {
 
 function renderBudget(monthVal) {
   if (!monthVal) monthVal = getBudgetCycles().slice(-1)[0]?.value || '';
+
+  // 데이터 없는 달 처리
+  if (transactions.length === 0 && fixedExpenses.length === 0) {
+    ['b-income','b-fixed','b-usable','b-variable','b-remain'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = '—'; el.style.color = ''; }
+    });
+    ['b-income-sub','b-variable-sub','b-remain-sub','b-var-label','b-total-label'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '';
+    });
+    document.getElementById('b-var-bar').style.width = '0%';
+    document.getElementById('b-total-bar').style.width = '0%';
+    document.getElementById('b-donut').innerHTML = '<text x="75" y="80" text-anchor="middle" fill="#555a66" font-size="12" font-family="Pretendard,sans-serif">데이터 없음</text>';
+    document.getElementById('b-cat-legend').innerHTML = '';
+    document.getElementById('b-insights').innerHTML = '<div class="empty"><p>거래를 추가하면 인사이트가 나타나요</p></div>';
+    document.getElementById('b-tx-list').innerHTML = '<div class="empty"><div class="em-icon">💸</div><p>거래 내역이 없어요</p></div>';
+    document.getElementById('b-fixed-list').innerHTML = '<div class="empty"><p>고정지출 항목이 없어요</p></div>';
+    const remainEl = document.querySelector(`.month-remain-${monthVal}`);
+    if (remainEl) remainEl.textContent = '데이터 없음';
+    const periodEl = document.getElementById('budget-period-label');
+    if (periodEl) { const {start,end} = getCycleRange(monthVal); const [sy,sm,sd]=start.split('-'); const [ey,em,ed]=end.split('-'); periodEl.textContent = `${sy}.${sm}.${sd} ~ ${ey}.${em}.${ed}`; }
+    return;
+  }
+
   // 월별 사이드 남은돈 업데이트
   const budgetStats = calcBudgetStats();
   const sideRemain = budgetStats.remain;
@@ -1450,7 +1475,7 @@ function renderMonthList(currentMonth) {
     const isActive = cycle.value === currentMonth;
     return `<div class="budget-month-item ${isActive?'active':''}" onclick="selectBudgetMonth('${cycle.value}')" style="padding:12px 16px;cursor:pointer;border-left:2px solid ${isActive?'var(--accent)':'transparent'};background:${isActive?'var(--accent-dim)':'transparent'};transition:all 0.15s;">
       <div style="font-size:13px;font-weight:${isActive?'600':'400'};color:${isActive?'var(--accent)':'var(--text-sub)'};">${cycle.label}</div>
-      <div class="month-remain-${cycle.value}" style="font-size:11px;color:var(--text-muted);margin-top:2px;">로딩 중...</div>
+      <div class="month-remain-${cycle.value}" style="font-size:11px;color:var(--text-muted);margin-top:2px;"></div>
     </div>`;
   }).join('');
 }
