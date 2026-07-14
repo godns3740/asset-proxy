@@ -1589,12 +1589,8 @@ function renderCalendar() {
 function showDayDetail(dateStr) {
   const txs = transactions.filter(t => t.date === dateStr && t.type === '지출');
   const total = txs.reduce((s,t) => s+t.amount, 0);
-  const list = txs.map(t => `• ${t.memo||t.category}: ${W(t.amount)}`).join('
-');
-  alert(`${dateStr} 지출
-총 ${W(total)}
-
-${list}`);
+  const list = txs.map(t => '• ' + (t.memo||t.category) + ': ' + W(t.amount)).join('\n');
+  alert(dateStr + ' 지출\n총 ' + W(total) + '\n\n' + list);
 }
 
 // 거래 모달
