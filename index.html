@@ -1305,9 +1305,10 @@ function calcBudgetStats() {
 function renderBudget(monthVal) {
   if (!monthVal) monthVal = getBudgetCycles().slice(-1)[0]?.value || '';
   // 월별 사이드 남은돈 업데이트
-  const { remain } = calcBudgetStats();
+  const budgetStats = calcBudgetStats();
+  const sideRemain = budgetStats.remain;
   const remainEl = document.querySelector(`.month-remain-${monthVal}`);
-  if (remainEl) remainEl.textContent = remain >= 0 ? `남은돈 ${W(remain)}` : `초과 ${W(Math.abs(remain))}`;
+  if (remainEl) remainEl.textContent = sideRemain >= 0 ? `남은돈 ${W(sideRemain)}` : `초과 ${W(Math.abs(sideRemain))}`;
   const { income, fixedTotal, usable, variable, totalExpense, remain, byCat, filtered } = calcBudgetStats();
   const { start, end } = getCycleRange(monthVal);
 
