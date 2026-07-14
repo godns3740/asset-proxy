@@ -54,7 +54,7 @@ nav{width:var(--nav-w);min-height:100vh;background:var(--surface);border-right:1
 .nav-footer .updated{font-size:11px;color:var(--text-muted);}
 
 /* MAIN */
-main{margin-left:var(--nav-w);flex:1;min-height:100vh;overflow:hidden;}
+main{margin-left:var(--nav-w);flex:1;min-height:100vh;}
 .page{display:none;padding:36px 40px 80px;max-width:1100px;}
 .page.active{display:block;}
 
@@ -393,15 +393,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 </main>
 
   <!-- 가계부 -->
-  <div class="page" id="page-budget" style="padding:0;max-width:100%;width:100%;">
-    <div style="display:grid;grid-template-columns:200px 1fr;height:100vh;overflow:hidden;">
+  <div class="page" id="page-budget" style="padding:0;max-width:none;">
+    <div style="display:grid;grid-template-columns:200px 1fr;height:calc(100vh - 0px);overflow:hidden;">
 
       <!-- 월별 사이드 패널 -->
       <div style="background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;">
         <div style="padding:16px 16px 10px;border-bottom:1px solid var(--border);">
           <div style="font-size:11px;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;">월별 기록</div>
-          <button class="btn btn-primary" style="width:100%;font-size:13px;" onclick="openTxModal(null,'지출')">+ 지출 추가</button>
-          <button class="btn btn-ghost" style="width:100%;font-size:13px;margin-top:6px;" onclick="openTxModal(null,'수입')">+ 수입 추가</button>
+          <button class="btn btn-primary" style="width:100%;font-size:13px;" onclick="openTxModal(null, '지출')">+ 지출 추가</button>
+          <button class="btn btn-ghost" style="width:100%;font-size:13px;margin-top:6px;" onclick="openTxModal(null, '수입')">+ 수입 추가</button>
         </div>
         <div id="budget-month-list" style="flex:1;padding:8px 0;"></div>
       </div>
@@ -419,11 +419,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
         </div>
 
         <!-- 탭 컨텐츠 -->
-        <div style="flex:1;overflow-y:auto;padding:24px 32px;">
+        <div style="flex:1;overflow-y:auto;padding:24px;">
 
           <!-- 대시보드 탭 -->
           <div id="budget-tab-overview" class="budget-tab-content">
-            <div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:20px;gap:14px;">
+            <div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:20px;">
               <div class="card accent">
                 <div class="label">수입</div>
                 <div class="value" id="b-income" style="font-size:18px;">—</div>
@@ -453,18 +453,25 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
             <!-- 바 그래프 -->
             <div class="box" style="margin-bottom:20px;">
-              <div class="box-head"><h2>지출 현황</h2></div>
-              <div class="box-body" style="display:flex;flex-direction:column;gap:14px;">
+              <div class="box-head"><h2>예산 현황</h2></div>
+              <div class="box-body" style="display:flex;flex-direction:column;gap:16px;">
                 <div>
-                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-                    <span style="color:var(--text-sub)">변동지출 / 사용가능</span>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;">
+                    <span style="color:var(--text-sub)">💰 남은 예산 (사용가능 - 변동지출)</span>
                     <span id="b-var-label" style="font-weight:500;"></span>
                   </div>
-                  <div class="liq-bg"><div id="b-var-bar" class="liq-fill" style="width:0%;"></div></div>
+                  <div style="height:12px;background:var(--surface3);border-radius:6px;overflow:hidden;position:relative;">
+                    <div id="b-spent-bar" style="position:absolute;left:0;top:0;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--orange),var(--red));transition:width 0.5s ease;width:0%;"></div>
+                    <div id="b-var-bar" style="position:absolute;right:0;top:0;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--accent),#22d3ee);transition:width 0.5s ease;width:100%;"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px;">
+                    <span id="b-spent-label"></span>
+                    <span id="b-remain-label2"></span>
+                  </div>
                 </div>
                 <div>
-                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
-                    <span style="color:var(--text-sub)">전체지출 / 수입</span>
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;">
+                    <span style="color:var(--text-sub)">📊 전체지출 / 수입</span>
                     <span id="b-total-label" style="font-weight:500;"></span>
                   </div>
                   <div class="liq-bg"><div id="b-total-bar" class="liq-fill" style="width:0%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
@@ -489,7 +496,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
           <!-- 사용내역 탭 -->
           <div id="budget-tab-transactions" class="budget-tab-content" style="display:none;">
-            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <button onclick="switchTxView('list')" id="tx-view-list" style="padding:7px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
+                <button onclick="switchTxView('calendar')" id="tx-view-cal" style="padding:7px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
+              </div>
               <select id="b-filter-type" onchange="renderBudget()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:inherit;">
                 <option value="">전체</option><option value="수입">수입</option><option value="지출">지출</option>
               </select>
@@ -502,7 +513,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
                 <option>기타</option><option>기타수입</option><option>월급</option><option>부수입</option>
               </select>
             </div>
-            <div class="box"><div id="b-tx-list"></div></div>
+            <div id="b-tx-list-view"><div class="box"><div id="b-tx-list"></div></div></div>
+            <div id="b-tx-cal-view" style="display:none;">
+              <div class="box"><div id="b-tx-calendar" style="padding:16px;"></div></div>
+            </div>
           </div>
 
           <!-- 고정지출 탭 -->
@@ -1228,11 +1242,14 @@ let editingFixedId = null;
 function getBudgetCycles() {
   const cycles = [];
   const now = new Date();
-  for (let i = 5; i >= -1; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const start = new Date(2026, 6, 1); // 2026년 7월부터
+  let d = new Date(start);
+  while (d <= now || (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth())) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     cycles.push({ value: `${y}-${m}`, label: `${y}년 ${m}월` });
+    d = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    if (d > new Date(now.getFullYear(), now.getMonth() + 1, 0)) break;
   }
   return cycles;
 }
@@ -1304,36 +1321,10 @@ function calcBudgetStats() {
 
 function renderBudget(monthVal) {
   if (!monthVal) monthVal = getBudgetCycles().slice(-1)[0]?.value || '';
-
-  // 데이터 없는 달 처리
-  if (transactions.length === 0 && fixedExpenses.length === 0) {
-    ['b-income','b-fixed','b-usable','b-variable','b-remain'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { el.textContent = '—'; el.style.color = ''; }
-    });
-    ['b-income-sub','b-variable-sub','b-remain-sub','b-var-label','b-total-label'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = '';
-    });
-    document.getElementById('b-var-bar').style.width = '0%';
-    document.getElementById('b-total-bar').style.width = '0%';
-    document.getElementById('b-donut').innerHTML = '<text x="75" y="80" text-anchor="middle" fill="#555a66" font-size="12" font-family="Pretendard,sans-serif">데이터 없음</text>';
-    document.getElementById('b-cat-legend').innerHTML = '';
-    document.getElementById('b-insights').innerHTML = '<div class="empty"><p>거래를 추가하면 인사이트가 나타나요</p></div>';
-    document.getElementById('b-tx-list').innerHTML = '<div class="empty"><div class="em-icon">💸</div><p>거래 내역이 없어요</p></div>';
-    document.getElementById('b-fixed-list').innerHTML = '<div class="empty"><p>고정지출 항목이 없어요</p></div>';
-    const remainEl = document.querySelector(`.month-remain-${monthVal}`);
-    if (remainEl) remainEl.textContent = '데이터 없음';
-    const periodEl = document.getElementById('budget-period-label');
-    if (periodEl) { const {start,end} = getCycleRange(monthVal); const [sy,sm,sd]=start.split('-'); const [ey,em,ed]=end.split('-'); periodEl.textContent = `${sy}.${sm}.${sd} ~ ${ey}.${em}.${ed}`; }
-    return;
-  }
-
   // 월별 사이드 남은돈 업데이트
-  const budgetStats = calcBudgetStats();
-  const sideRemain = budgetStats.remain;
+  const { remain } = calcBudgetStats();
   const remainEl = document.querySelector(`.month-remain-${monthVal}`);
-  if (remainEl) remainEl.textContent = sideRemain >= 0 ? `남은돈 ${W(sideRemain)}` : `초과 ${W(Math.abs(sideRemain))}`;
+  if (remainEl) remainEl.textContent = remain >= 0 ? `남은돈 ${W(remain)}` : `초과 ${W(Math.abs(remain))}`;
   const { income, fixedTotal, usable, variable, totalExpense, remain, byCat, filtered } = calcBudgetStats();
   const { start, end } = getCycleRange(monthVal);
 
@@ -1354,14 +1345,24 @@ function renderBudget(monthVal) {
   document.getElementById('b-remain').style.color = remain >= 0 ? 'var(--accent)' : 'var(--red)';
   document.getElementById('b-remain-sub').textContent = remain >= 0 ? '아직 남아있어요 💪' : '사용가능 초과! ⚠️';
 
-  // 바
+  // 바 그래프 - 남은돈이 줄어드는 방향
   const varPct = usable > 0 ? Math.min(variable/usable*100, 100) : 0;
+  const remainPct = usable > 0 ? Math.max(0, 100 - varPct) : 0;
   const totalPct = income > 0 ? Math.min(totalExpense/income*100, 100) : 0;
-  document.getElementById('b-var-bar').style.width = varPct + '%';
-  document.getElementById('b-var-bar').style.background = varPct > 90 ? 'linear-gradient(90deg,var(--orange),var(--red))' : 'linear-gradient(90deg,var(--accent),#22d3ee)';
-  document.getElementById('b-total-bar').style.width = totalPct + '%';
-  document.getElementById('b-var-label').textContent = `${W(variable)} / ${W(usable)} (${varPct.toFixed(1)}%)`;
-  document.getElementById('b-total-label').textContent = `${W(totalExpense)} / ${W(income)} (${totalPct.toFixed(1)}%)`;
+  const spentBar = document.getElementById('b-spent-bar');
+  const remainBar = document.getElementById('b-var-bar');
+  if (spentBar) spentBar.style.width = varPct + '%';
+  if (remainBar) remainBar.style.width = remainPct + '%';
+  const varLabelEl = document.getElementById('b-var-label');
+  if (varLabelEl) varLabelEl.textContent = usable > 0 ? `${varPct.toFixed(1)}% 사용` : '';
+  const spentLabelEl = document.getElementById('b-spent-label');
+  if (spentLabelEl) spentLabelEl.textContent = `사용 ${W(variable)}`;
+  const remainLabel2El = document.getElementById('b-remain-label2');
+  if (remainLabel2El) remainLabel2El.textContent = `남은 ${W(Math.max(0, remain))}`;
+  const totalBar = document.getElementById('b-total-bar');
+  if (totalBar) totalBar.style.width = totalPct + '%';
+  const totalLabelEl = document.getElementById('b-total-label');
+  if (totalLabelEl) totalLabelEl.textContent = `${W(totalExpense)} / ${W(income)} (${totalPct.toFixed(1)}%)`;
 
   // 도넛
   const expenseTotal = Object.values(byCat).reduce((s,v)=>s+v,0);
@@ -1475,27 +1476,31 @@ function renderMonthList(currentMonth) {
     const isActive = cycle.value === currentMonth;
     return `<div class="budget-month-item ${isActive?'active':''}" onclick="selectBudgetMonth('${cycle.value}')" style="padding:12px 16px;cursor:pointer;border-left:2px solid ${isActive?'var(--accent)':'transparent'};background:${isActive?'var(--accent-dim)':'transparent'};transition:all 0.15s;">
       <div style="font-size:13px;font-weight:${isActive?'600':'400'};color:${isActive?'var(--accent)':'var(--text-sub)'};">${cycle.label}</div>
-      <div class="month-remain-${cycle.value}" style="font-size:11px;color:var(--text-muted);margin-top:2px;"></div>
+      <div class="month-remain-${cycle.value}" style="font-size:11px;color:var(--text-muted);margin-top:2px;">로딩 중...</div>
     </div>`;
   }).join('');
 }
 
 async function selectBudgetMonth(monthVal) {
+  // 대시보드 탭으로 리셋
+  switchBudgetTab('overview');
+  
+  // 사이드 패널 활성 상태 업데이트
   document.querySelectorAll('.budget-month-item').forEach(el => {
-    el.style.borderLeftColor = 'transparent';
-    el.style.background = 'transparent';
-    el.querySelector('div').style.color = 'var(--text-sub)';
-    el.querySelector('div').style.fontWeight = '400';
+    const isActive = el.dataset.month === monthVal;
+    el.style.borderLeftColor = isActive ? 'var(--accent)' : 'transparent';
+    el.style.background = isActive ? 'var(--accent-dim)' : 'transparent';
+    const title = el.querySelector('.month-title');
+    if (title) { title.style.color = isActive ? 'var(--accent)' : 'var(--text-sub)'; title.style.fontWeight = isActive ? '600' : '400'; }
   });
-  const active = document.querySelector(`.budget-month-item[onclick*="${monthVal}"]`);
-  if (active) {
-    active.style.borderLeftColor = 'var(--accent)';
-    active.style.background = 'var(--accent-dim)';
-    active.querySelector('div').style.color = 'var(--accent)';
-    active.querySelector('div').style.fontWeight = '600';
-  }
-  await loadTransactions(monthVal);
-  await loadFixedExpenses();
+
+  // 빠른 로딩
+  const [txData, fixedData] = await Promise.all([
+    fetch(`${PROXY_BASE_URL}/api/transactions?start=${getCycleRange(monthVal).start}&end=${getCycleRange(monthVal).end}`).then(r=>r.json()).catch(()=>[]),
+    fetch(`${PROXY_BASE_URL}/api/fixed`).then(r=>r.json()).catch(()=>[]),
+  ]);
+  transactions = Array.isArray(txData) ? txData : [];
+  fixedExpenses = Array.isArray(fixedData) ? fixedData : [];
   renderBudget(monthVal);
 }
 
@@ -1510,6 +1515,86 @@ async function renderBudgetPage() {
   renderMonthList(month);
   await Promise.all([loadTransactions(month), loadFixedExpenses()]);
   renderBudget(month);
+}
+
+// 뷰 전환
+let currentTxView = 'list';
+function switchTxView(view) {
+  currentTxView = view;
+  document.getElementById('tx-view-list').style.background = view === 'list' ? 'var(--accent)' : 'transparent';
+  document.getElementById('tx-view-list').style.color = view === 'list' ? '#0e0f11' : 'var(--text-sub)';
+  document.getElementById('tx-view-cal').style.background = view === 'calendar' ? 'var(--accent)' : 'transparent';
+  document.getElementById('tx-view-cal').style.color = view === 'calendar' ? '#0e0f11' : 'var(--text-sub)';
+  document.getElementById('b-tx-list-view').style.display = view === 'list' ? 'block' : 'none';
+  document.getElementById('b-tx-cal-view').style.display = view === 'calendar' ? 'block' : 'none';
+  if (view === 'calendar') renderCalendar();
+}
+
+function renderCalendar() {
+  const cal = document.getElementById('b-tx-calendar');
+  if (!cal) return;
+  
+  // 거래 날짜별 그룹
+  const byDate = {};
+  transactions.filter(t => t.type === '지출').forEach(t => {
+    if (!byDate[t.date]) byDate[t.date] = 0;
+    byDate[t.date] += t.amount;
+  });
+  
+  // 현재 월 기준
+  const dates = Object.keys(byDate);
+  if (dates.length === 0) { cal.innerHTML = '<div class="empty"><p>데이터 없음</p></div>'; return; }
+  
+  const firstDate = dates.sort()[0];
+  const [fy, fm] = firstDate.split('-').map(Number);
+  const daysInMonth = new Date(fy, fm, 0).getDate();
+  const firstDay = new Date(fy, fm-1, 1).getDay();
+  
+  const maxAmt = Math.max(...Object.values(byDate));
+  const days = ['일','월','화','수','목','금','토'];
+  
+  let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;">`;
+  // 요일 헤더
+  days.forEach(d => { html += `<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">${d}</div>`; });
+  
+  // 빈 칸
+  for (let i = 0; i < firstDay; i++) html += '<div></div>';
+  
+  // 날짜
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${fy}-${String(fm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const amt = byDate[dateStr] || 0;
+    const intensity = amt > 0 ? Math.max(0.15, amt/maxAmt) : 0;
+    const hasData = amt > 0;
+    html += `<div onclick="${hasData ? `showDayDetail('${dateStr}')` : ''}" style="
+      padding:6px 2px;border-radius:6px;cursor:${hasData?'pointer':'default'};
+      background:${hasData ? `rgba(251,146,60,${intensity})` : 'var(--surface2)'};
+      border:1px solid ${hasData ? `rgba(251,146,60,${Math.min(1,intensity+0.2)})` : 'var(--border)'};
+      transition:all 0.15s;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+      <div style="font-size:12px;color:${hasData?'var(--text)':'var(--text-muted)'};">${d}</div>
+      ${hasData ? `<div style="font-size:10px;color:var(--text-sub);">${(amt/10000).toFixed(0)}만</div>` : ''}
+    </div>`;
+  }
+  html += '</div>';
+  
+  // 범례
+  html += `<div style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--text-muted);">
+    <div style="width:12px;height:12px;border-radius:3px;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);"></div> 적게
+    <div style="width:12px;height:12px;border-radius:3px;background:rgba(251,146,60,0.6);border:1px solid rgba(251,146,60,0.8);"></div> 보통
+    <div style="width:12px;height:12px;border-radius:3px;background:rgba(251,146,60,1);border:1px solid rgba(251,146,60,1);"></div> 많이
+  </div>`;
+  cal.innerHTML = html;
+}
+
+function showDayDetail(dateStr) {
+  const txs = transactions.filter(t => t.date === dateStr && t.type === '지출');
+  const total = txs.reduce((s,t) => s+t.amount, 0);
+  const list = txs.map(t => `• ${t.memo||t.category}: ${W(t.amount)}`).join('
+');
+  alert(`${dateStr} 지출
+총 ${W(total)}
+
+${list}`);
 }
 
 // 거래 모달
@@ -1614,10 +1699,8 @@ async function deleteFixed(id) {
   await renderBudgetPage();
 }
 
-const txModalBg = document.getElementById('tx-modal-bg');
-const fixedModalBg = document.getElementById('fixed-modal-bg');
-if (txModalBg) txModalBg.addEventListener('click', function(e) { if(e.target===this) closeTxModal(); });
-if (fixedModalBg) fixedModalBg.addEventListener('click', function(e) { if(e.target===this) closeFixedModal(); });
+document.getElementById('tx-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeTxModal(); });
+document.getElementById('fixed-modal-bg').addEventListener('click', function(e) { if(e.target===this) closeFixedModal(); });
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function handleRefresh() {
