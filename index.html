@@ -471,15 +471,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
           <!-- 사용내역 탭 -->
           <div id="budget-tab-transactions" style="display:none;">
-            <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
-              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-                <button id="tx-view-list" onclick="switchTxView('list')" style="padding:7px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
-                <button id="tx-view-cal" onclick="switchTxView('calendar')" style="padding:7px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                  <button id="tx-view-list" onclick="switchTxView('list')" style="padding:7px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
+                  <button id="tx-view-cal" onclick="switchTxView('calendar')" style="padding:7px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
+                </div>
+                <select id="b-filter-type" onchange="applyFilters()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:inherit;">
+                  <option value="">전체</option><option value="수입">수입</option><option value="지출">지출</option>
+                </select>
+                <input type="text" id="b-search" placeholder="🔍 검색 (예: 커피, 올리브영)" oninput="applyFilters()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:8px;font-size:12px;font-family:inherit;width:200px;outline:none;">
               </div>
-              <select id="b-filter-type" onchange="renderTxList()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:inherit;">
-                <option value="">전체</option><option value="수입">수입</option><option value="지출">지출</option>
-              </select>
               <div id="b-cat-filters" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+              <div id="b-filter-summary" style="display:none;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:13px;"></div>
             </div>
             <div id="b-tx-list-view"><div class="box"><div id="b-tx-list"></div></div></div>
             <div id="b-tx-cal-view" style="display:none;">
@@ -510,48 +514,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 <!-- MODAL -->
   <!-- 거래 추가/수정 모달 -->
-  <!-- 자산 추가/수정 모달 -->
-  <div class="modal-bg" id="modal-bg">
-    <div class="modal">
-      <h3 id="modal-title">자산 추가</h3>
-      <div class="form-grid">
-        <div class="form-group form-full"><label>자산명</label><input type="text" id="f-name" placeholder="예: 신한 정기적금"></div>
-        <div class="form-group"><label>종류</label>
-          <select id="f-type">
-            <option value="현금">현금</option><option value="국내주식">국내주식</option>
-            <option value="해외주식">해외주식</option><option value="적금">적금</option>
-            <option value="퇴직연금">퇴직연금</option><option value="전세">전세</option><option value="기타">기타</option>
-          </select>
-        </div>
-        <div class="form-group"><label>상태</label>
-          <select id="f-status"><option value="운용중">운용중</option><option value="만기완료">만기완료</option><option value="해지">해지</option></select>
-        </div>
-        <div class="form-group"><label>현재 금액 (원)</label>
-          <input type="text" inputmode="numeric" id="f-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group"><label>월 납입액 (원)</label>
-          <input type="text" inputmode="numeric" id="f-monthly" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group"><label>이자율 (연 %)</label>
-          <input type="text" inputmode="decimal" id="f-rate" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group"><label>시작일</label><input type="date" id="f-start"></div>
-        <div class="form-group"><label>만기일</label><input type="date" id="f-maturity"></div>
-        <div class="form-group form-full"><label>메모</label><input type="text" id="f-memo" placeholder="메모"></div>
-        <div class="form-group" id="f-avgprice-group"><label>평균단가 (원)</label>
-          <input type="text" inputmode="numeric" id="f-avgprice" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group" id="f-quantity-group"><label>보유수량</label>
-          <input type="text" inputmode="decimal" id="f-quantity" placeholder="0">
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeModal()">취소</button>
-        <button class="btn btn-primary" onclick="saveAsset()">저장</button>
-      </div>
-    </div>
-  </div>
-
   <div class="modal-bg" id="tx-modal-bg">
     <div class="modal">
       <h3 id="tx-modal-title">거래 추가</h3>
@@ -1251,7 +1213,7 @@ let currentBudgetMonth = null;
 let activeCatFilters = new Set();
 let currentTxView = 'list';
 
-const BUDGET_CAT_COLORS = {
+const CAT_COLORS = {
   '생활비':'#94a3b8','고정지출':'#38bdf8','저축':'#4ade80','투자':'#fbbf24',
   '배달-점심':'#fb923c','배달-저녁':'#f97316','외식':'#f59e0b','커피/간식':'#a78bfa',
   '미용/쇼핑':'#f472b6','오락':'#c084fc','술약속':'#818cf8',
@@ -1412,6 +1374,7 @@ function switchTxView(view) {
   if (listView) listView.style.display = view==='list'?'block':'none';
   if (calView) calView.style.display = view==='calendar'?'block':'none';
   if (view === 'calendar') renderCalendar();
+  if (view === 'list') renderTxList();
 }
 
 // ── 메인 렌더 ──────────────────────────────────────────────────
@@ -1463,14 +1426,14 @@ function renderBudget() {
     let off=0, paths='';
     const sorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
     sorted.forEach(([cat,amt])=>{
-      const color=BUDGET_CAT_COLORS[cat]||'#6b7280', pct=amt/expTotal, dash=pct*circ, gap=circ-dash;
+      const color=CAT_COLORS[cat]||'#6b7280', pct=amt/expTotal, dash=pct*circ, gap=circ-dash;
       paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;
       off+=dash;
     });
     donut.innerHTML=paths+`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="#8b8f9a" font-size="10" font-family="Pretendard,sans-serif">지출</text><text x="${cx}" y="${cy+10}" text-anchor="middle" fill="#f0f1f3" font-size="12" font-weight="600" font-family="Pretendard,sans-serif">${W(expTotal)}</text>`;
     if (legend) legend.innerHTML=sorted.map(([cat,amt])=>{
       const pct=(amt/expTotal*100).toFixed(1);
-      return `<div class="legend-item"><div class="leg-left"><div class="leg-dot" style="background:${BUDGET_CAT_COLORS[cat]||'#6b7280'}"></div>${cat}</div><div class="leg-right"><span class="leg-pct">${pct}%</span><span class="leg-val">${W(amt)}</span></div></div>`;
+      return `<div class="legend-item"><div class="leg-left"><div class="leg-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></div>${cat}</div><div class="leg-right"><span class="leg-pct">${pct}%</span><span class="leg-val">${W(amt)}</span></div></div>`;
     }).join('');
   } else if (donut) {
     donut.innerHTML='<text x="75" y="80" text-anchor="middle" fill="#555a66" font-size="12" font-family="Pretendard,sans-serif">데이터 없음</text>';
@@ -1506,7 +1469,7 @@ function renderCatFilters(byCat) {
   container.innerHTML = cats.map(cat => {
     const active = activeCatFilters.has(cat);
     return `<span onclick="toggleCatFilter('${cat}')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent-dim)':'transparent'};color:${active?'var(--accent)':'var(--text-muted)'};transition:all 0.15s;">
-      <span style="width:6px;height:6px;border-radius:50%;background:${BUDGET_CAT_COLORS[cat]||'#6b7280'};"></span>${cat}
+      <span style="width:6px;height:6px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};"></span>${cat}
     </span>`;
   }).join('');
 }
@@ -1544,7 +1507,7 @@ function renderTxList() {
       </div>
       ${txs.map(t=>`<div class="asset-row">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-          <div style="width:8px;height:8px;border-radius:50%;background:${BUDGET_CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
           <div style="min-width:0;"><div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.memo||t.category}</div>
           <div style="font-size:11px;color:var(--text-muted);">${t.category}${t.payment?' · '+t.payment:''}</div></div>
         </div>
@@ -1558,16 +1521,19 @@ function renderTxList() {
   }).join('');
 }
 
-function renderCalendar() {
+function renderCalendar(filtered) {
   const cal = document.getElementById('b-tx-calendar');
   if (!cal) return;
   const { start, end } = getCycleRange(currentBudgetMonth);
   const startDate = new Date(start);
   const endDate = new Date(end);
+  if (!filtered) filtered = getFilteredTx();
   
+  const byDateExp = {}, byDateInc = {};
+  filtered.filter(t=>t.type==='지출').forEach(t=>{ if(!byDateExp[t.date]) byDateExp[t.date]=0; byDateExp[t.date]+=t.amount; });
+  filtered.filter(t=>t.type==='수입').forEach(t=>{ if(!byDateInc[t.date]) byDateInc[t.date]=0; byDateInc[t.date]+=t.amount; });
   const byDate = {};
-  transactions.filter(t=>t.type==='지출').forEach(t=>{ if(!byDate[t.date]) byDate[t.date]=0; byDate[t.date]+=t.amount; });
-  const maxAmt = Math.max(...Object.values(byDate), 1);
+  Object.keys({...byDateExp,...byDateInc}).forEach(d=>{ byDate[d]={exp:byDateExp[d]||0,inc:byDateInc[d]||0}; });
   
   // 시작 날짜 기준 달력 - 여러 달에 걸칠 수 있음
   const days = ['일','월','화','수','목','금','토'];
@@ -1589,26 +1555,27 @@ function renderCalendar() {
     for (let d=1;d<=daysInMonth;d++) {
       const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const inRange = dateStr >= start && dateStr <= end;
-      const amt = byDate[dateStr]||0;
-      const intensity = amt>0 ? Math.max(0.15, amt/maxAmt) : 0;
-      html+=`<div onclick="${inRange&&amt>0?`showDayDetail('${dateStr}')`:''}" style="
-        padding:4px 2px;border-radius:6px;cursor:${inRange&&amt>0?'pointer':'default'};
-        background:${!inRange?'rgba(255,255,255,0.02)':amt>0?`rgba(251,146,60,${intensity})`:'var(--surface2)'};
-        border:1px solid ${!inRange?'transparent':amt>0?`rgba(251,146,60,${Math.min(1,intensity+0.2)})`:'var(--border)'};
+      const dayData = byDate[dateStr]||{exp:0,inc:0};
+      const hasData = inRange && (dayData.exp>0||dayData.inc>0);
+      html+=`<div onclick="${hasData?`showDayDetail('${dateStr}')`:''}" style="
+        padding:4px 2px;border-radius:6px;cursor:${hasData?'pointer':'default'};
+        background:${!inRange?'rgba(255,255,255,0.02)':hasData?'var(--surface3)':'var(--surface2)'};
+        border:1px solid ${!inRange?'transparent':hasData?'var(--border2)':'var(--border)'};
         opacity:${inRange?1:0.3};
-        min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+        min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
         <div style="font-size:12px;color:${inRange?'var(--text)':'var(--text-muted)'};">${d}</div>
-        ${inRange&&amt>0?`<div style="font-size:10px;color:var(--text-sub);">${(amt/10000).toFixed(0)}만</div>`:''}
+        ${inRange&&dayData.inc>0?`<div style="font-size:10px;color:var(--accent);font-weight:500;">+${(dayData.inc/10000).toFixed(0)}만</div>`:''}
+        ${inRange&&dayData.exp>0?`<div style="font-size:10px;color:var(--red);">-${(dayData.exp/10000).toFixed(0)}만</div>`:''}
       </div>`;
     }
     html+='</div></div>';
     curMonth = new Date(y, m+1, 1);
   }
   
-  html+=`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--text-muted);">
-    <div style="width:10px;height:10px;border-radius:2px;background:rgba(251,146,60,0.15);"></div>적게
-    <div style="width:10px;height:10px;border-radius:2px;background:rgba(251,146,60,0.6);"></div>보통
-    <div style="width:10px;height:10px;border-radius:2px;background:rgba(251,146,60,1);"></div>많이
+  html+=`<div style="display:flex;align-items:center;gap:12px;margin-top:10px;font-size:11px;color:var(--text-muted);">
+    <span style="color:var(--accent);">● 수입</span>
+    <span style="color:var(--red);">● 지출</span>
+    <span>날짜 클릭 시 상세 확인</span>
   </div>`;
   cal.innerHTML = html;
 }
@@ -1619,12 +1586,12 @@ function showDayDetail(dateStr) {
   const detailList = document.getElementById('b-cal-detail-list');
   if (!detailBox||!detailList) return;
   
-  const txs = transactions.filter(t=>t.date===dateStr);
+  const txs = getFilteredTx().filter(t=>t.date===dateStr);
   const total = txs.filter(t=>t.type==='지출').reduce((s,t)=>s+t.amount,0);
   if (detailTitle) detailTitle.textContent = dateStr + ' — 지출 ' + W(total);
   detailList.innerHTML = txs.map(t=>`<div class="asset-row">
     <div style="display:flex;align-items:center;gap:8px;flex:1;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${BUDGET_CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
       <div><div style="font-size:13px;">${t.memo||t.category}</div>
       <div style="font-size:11px;color:var(--text-muted);">${t.category}</div></div>
     </div>
@@ -1836,8 +1803,9 @@ async function handleRefresh() {
   if (st) st.textContent = `마지막 업데이트: ${new Date().toLocaleTimeString('ko-KR')}`;
 }
 
-const _modalBg = document.getElementById('modal-bg');
-if (_modalBg) _modalBg.addEventListener('click', function(e) { if(e.target===this) closeModal(); });
+document.getElementById('modal-bg').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
 
 // 숫자 입력 필드: 숫자와 소수점만 허용, 앞자리 0 제거
 document.querySelectorAll('.num-input').forEach(input => {
