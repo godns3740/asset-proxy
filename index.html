@@ -55,7 +55,7 @@ nav{width:var(--nav-w);min-height:100vh;background:var(--surface);border-right:1
 
 /* MAIN */
 main{margin-left:var(--nav-w);flex:1;min-height:100vh;}
-.page{display:none;padding:36px 40px 80px;}
+.page{display:none;padding:36px 40px 80px;max-width:1100px;margin-left:0;}
 .page.active{display:block;}
 
 /* PAGE HEADER */
@@ -510,7 +510,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 
   <!-- 내집마련 -->
-  <div class="page" id="page-home">
+  <div id="page-home" style="display:none;padding:36px 40px 80px;">
     <div class="page-header">
       <h1>🏠 내집마련 시뮬레이터</h1>
       <p>날짜 기준으로 우리 둘의 자산을 확인하고 집 매매 계획을 세워요</p>
@@ -527,10 +527,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       <!-- 날짜 선택 -->
       <div class="box" style="margin-bottom:20px;">
         <div class="box-head"><h2>📅 기준 날짜</h2></div>
-        <div class="box-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-          <input type="month" id="home-date" style="font-size:16px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:9px;font-family:inherit;outline:none;">
+        <div class="box-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="home-year" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:15px;font-weight:500;padding:9px 14px;border-radius:9px;outline:none;cursor:pointer;">
+              <option value="2025">2025년</option>
+              <option value="2026" selected>2026년</option>
+              <option value="2027">2027년</option>
+              <option value="2028">2028년</option>
+              <option value="2029">2029년</option>
+              <option value="2030">2030년</option>
+            </select>
+            <select id="home-month" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:15px;font-weight:500;padding:9px 14px;border-radius:9px;outline:none;cursor:pointer;">
+              <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
+              <option value="04">4월</option><option value="05">5월</option><option value="06">6월</option>
+              <option value="07" selected>7월</option><option value="08">8월</option><option value="09">9월</option>
+              <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+            </select>
+            <input type="hidden" id="home-date">
+          </div>
+          <button onclick="calcHomeAssets()" class="btn btn-primary" style="font-size:13px;padding:10px 20px;">📅 계산하기</button>
           <span id="home-date-label" style="font-size:13px;color:var(--text-muted);"></span>
-          <button onclick="calcHomeAssets()" class="btn btn-primary" style="font-size:13px;">계산하기</button>
         </div>
       </div>
 
@@ -2290,15 +2306,17 @@ async function loadHomeData() {
 }
 
 function getAssetValueAtDate(asset, dateStr) {
+  // 날짜 기준으로 자산 가치 계산
   const targetDate = new Date(dateStr + '-01');
+  const now = new Date();
+  
   if (asset.maturity_date) {
     const maturity = new Date(asset.maturity_date);
     if (targetDate >= maturity) {
+      // 만기 이후 → 정상 금액
       return { amount: asset.amount, liquidity: '유동', matured: true };
     }
   }
-  // 만기 전이면 liquidity 그대로
-  if (asset.liquidity === '불가') return { amount: asset.amount, liquidity: '불가', matured: false };
   return { amount: asset.amount, liquidity: asset.liquidity, matured: false };
 }
 
@@ -2309,15 +2327,17 @@ function getDiaLiquidity(asset, dateStr) {
   if (asset.type === '국내주식' || asset.type === '해외주식') return '유동';
   if (asset.type === '전세') {
     if (asset.maturity) {
-      const mat = new Date(asset.maturity.substring(0,7) + '-01');
+      const mat = new Date(asset.maturity);
       return target >= mat ? '유동' : '비유동';
     }
     return '비유동';
   }
   if (asset.type === '적금') {
-    if (asset.maturity) {
-      const mat = new Date(asset.maturity.substring(0,7) + '-01');
-      return target >= mat ? '유동' : '비유동';
+    if (asset.name.includes('청년도약')) {
+      if (asset.maturity) {
+        const mat = new Date(asset.maturity);
+        return target >= mat ? '유동' : '비유동';
+      }
     }
     return '비유동';
   }
@@ -2387,7 +2407,7 @@ function renderHomeAssets() {
 
     const toggle = document.createElement('span');
     toggle.style.cssText = 'font-size:11px;color:var(--text-muted);margin-left:4px;';
-    toggle.textContent = '▼';
+    toggle.textContent = '▶';
 
     header.appendChild(checkbox);
     header.appendChild(groupLabel);
@@ -2396,19 +2416,18 @@ function renderHomeAssets() {
 
     // 개별 항목 (2개 이상일 때만)
     const itemsDiv = document.createElement('div');
-    itemsDiv.style.display = 'block';
+    itemsDiv.style.display = 'none';
 
     if (groupAssets.length > 1) {
-      // 헤더 클릭 → 펼치기/접기
-      header.onclick = isImpossibleGroup ? null : () => {
-        itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
-        toggle.textContent = itemsDiv.style.display === 'none' ? '▶' : '▼';
+      header.onclick = isImpossibleGroup ? null : (e) => {
+        if (e.target === toggle || e.target === checkbox || e.target === checkbox.firstChild) {
+          toggleDiaGroup(group.key, groupAssets, dateStr);
+        } else {
+          itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
+          toggle.textContent = itemsDiv.style.display === 'none' ? '▶' : '▼';
+        }
       };
-      // 체크박스 클릭 → 선택/해제 (이벤트 전파 차단)
-      checkbox.onclick = isImpossibleGroup ? null : (e) => {
-        e.stopPropagation();
-        toggleDiaGroup(group.key, groupAssets, dateStr);
-      };
+      checkbox.onclick = (e) => { e.stopPropagation(); toggleDiaGroup(group.key, groupAssets, dateStr); };
     } else {
       header.onclick = isImpossibleGroup ? null : () => toggleDiaGroup(group.key, groupAssets, dateStr);
     }
@@ -2556,6 +2575,9 @@ function updateHomeTotal() {
 }
 
 function calcHomeAssets() {
+  const year = document.getElementById('home-year').value;
+  const month = document.getElementById('home-month').value;
+  document.getElementById('home-date').value = year + '-' + month;
   renderHomeAssets();
 }
 
@@ -2724,8 +2746,11 @@ function switchHomeTab(tab) {
 async function renderHomePage() {
   await loadHomeData();
   const now = new Date();
-  const defaultDate = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  document.getElementById('home-date').value = defaultDate;
+  const defaultYear = String(now.getFullYear());
+  const defaultMonth = String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('home-year').value = defaultYear;
+  document.getElementById('home-month').value = defaultMonth;
+  document.getElementById('home-date').value = defaultYear + '-' + defaultMonth;
   renderHomeAssets();
 }
 
