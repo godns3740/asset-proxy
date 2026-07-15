@@ -2314,9 +2314,15 @@ async function deleteFixed(id){
 
 // ── fmtNum ───────────────────────────────────────────────────────
 function fmtNum(el){
-  const raw=el.value.replace(/[^0-9]/g,'');
-  el.dataset.raw=raw;
-  el.value=raw?parseInt(raw).toLocaleString('ko-KR'):'';
+  const pos = el.selectionStart;
+  const oldVal = el.value;
+  const raw = oldVal.replace(/[^0-9]/g,'');
+  el.dataset.raw = raw;
+  const formatted = raw ? parseInt(raw).toLocaleString('ko-KR') : '';
+  el.value = formatted;
+  // 커서 위치 보정
+  const diff = formatted.length - oldVal.length;
+  try { el.setSelectionRange(pos+diff, pos+diff); } catch(e) {}
 }
 
 // ── 가계부 초기화 ────────────────────────────────────────────────
