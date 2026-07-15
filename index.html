@@ -1725,6 +1725,20 @@ function renderCatFilters(byCat) {
   }).join('');
 }
 
+function setTypeFilter(type) {
+  const el = document.getElementById('b-filter-type-sel');
+  if (el) el.value = type;
+  ['all','income','expense'].forEach(t => {
+    const btn = document.getElementById('f-type-' + t);
+    if (btn) {
+      const isActive = (t === 'all' && type === '') || (t === 'income' && type === '수입') || (t === 'expense' && type === '지출');
+      btn.style.background = isActive ? 'var(--accent)' : 'transparent';
+      btn.style.color = isActive ? '#0e0f11' : 'var(--text-sub)';
+    }
+  });
+  applyFilters();
+}
+
 function applyFilters() {
   const filtered = getFilteredTx();
   const sumEl = document.getElementById('b-filter-summary');
@@ -1763,7 +1777,7 @@ function toggleCatFilter(cat) {
 function renderTxList() {
   const txList = document.getElementById('b-tx-list');
   if (!txList) return;
-  const filterType = document.getElementById('b-filter-type')?.value || '';
+  const filterType = document.getElementById('b-filter-type-sel')?.value || '';
   let filtered = [...transactions];
   if (filterType) filtered = filtered.filter(t=>t.type===filterType);
   if (activeCatFilters.size>0) filtered = filtered.filter(t=>activeCatFilters.has(t.category));
