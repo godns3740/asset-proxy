@@ -1373,7 +1373,8 @@ function switchTxView(view) {
   if (calBtn) { calBtn.style.background = view==='calendar'?'var(--accent)':'transparent'; calBtn.style.color = view==='calendar'?'#0e0f11':'var(--text-sub)'; }
   if (listView) listView.style.display = view==='list'?'block':'none';
   if (calView) calView.style.display = view==='calendar'?'block':'none';
-  applyFilters();
+  // applyFilters가 나중에 선언되므로 setTimeout으로 처리
+  setTimeout(() => { if (typeof applyFilters === 'function') applyFilters(); }, 0);
 }
 
 // ── 메인 렌더 ──────────────────────────────────────────────────
