@@ -393,123 +393,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     </div>
   </div>
 
-</main>
-
-  <!-- 가계부 -->
-  <div class="page" id="page-budget" style="padding:0;max-width:100%;width:100%;">
-    <div style="display:grid;grid-template-columns:220px 1fr;height:100vh;overflow:hidden;">
-
-      <!-- 좌측 월별 패널 -->
-      <div style="background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
-        <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
-          <button id="btn-add-expense" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--red);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">− 지출 추가</button>
-          <button id="btn-add-income" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">+ 수입 추가</button>
-        </div>
-        <div id="budget-month-list" style="flex:1;overflow-y:auto;padding:6px 0;"></div>
-      </div>
-
-      <!-- 우측 메인 -->
-      <div style="display:flex;flex-direction:column;overflow:hidden;">
-        <!-- 탭바 -->
-        <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-          <div style="display:flex;">
-            <button class="budget-tab active" id="btab-overview" onclick="switchBudgetTab('overview')">📊 대시보드</button>
-            <button class="budget-tab" id="btab-transactions" onclick="switchBudgetTab('transactions')">📋 사용내역</button>
-            <button class="budget-tab" id="btab-fixed" onclick="switchBudgetTab('fixed')">📌 고정지출</button>
-          </div>
-          <div id="budget-period-label" style="font-size:12px;color:var(--text-muted);"></div>
-        </div>
-
-        <!-- 컨텐츠 -->
-        <div style="flex:1;overflow-y:auto;padding:20px 24px;" id="budget-content">
-
-          <!-- 대시보드 탭 -->
-          <div id="budget-tab-overview">
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
-              <div class="card accent" style="padding:14px 16px;"><div class="label">수입</div><div class="value" id="b-income" style="font-size:16px;">—</div><div class="sub" id="b-income-sub"></div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">고정지출</div><div class="value" id="b-fixed" style="font-size:16px;">—</div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">사용 가능</div><div class="value" id="b-usable" style="font-size:16px;">—</div><div class="sub">수입−고정</div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">변동지출</div><div class="value" id="b-variable" style="font-size:16px;">—</div><div class="sub" id="b-variable-sub"></div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">남은 돈</div><div class="value" id="b-remain" style="font-size:16px;">—</div><div class="sub" id="b-remain-sub"></div></div>
-            </div>
-            <!-- 예산 바 -->
-            <div class="box" style="margin-bottom:16px;">
-              <div class="box-head"><h2>예산 현황</h2></div>
-              <div class="box-body" style="display:flex;flex-direction:column;gap:14px;">
-                <div>
-                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">남은 예산 (사용가능 − 변동지출)</span><span id="b-var-label" style="font-weight:500;"></span></div>
-                  <div style="height:12px;background:var(--surface3);border-radius:6px;overflow:hidden;position:relative;">
-                    <div id="b-spent-bar" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--orange),var(--red));border-radius:6px;transition:width 0.5s;width:0%;"></div>
-                    <div id="b-remain-bar" style="position:absolute;right:0;top:0;height:100%;background:linear-gradient(90deg,var(--accent),#22d3ee);border-radius:6px;transition:width 0.5s;width:100%;"></div>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px;"><span id="b-spent-lbl"></span><span id="b-remain-lbl"></span></div>
-                </div>
-                <div>
-                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">전체지출 / 수입</span><span id="b-total-label" style="font-weight:500;"></span></div>
-                  <div class="liq-bg"><div id="b-total-bar" class="liq-fill" style="width:0%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
-                </div>
-              </div>
-            </div>
-            <div class="g2">
-              <div class="box"><div class="box-head"><h2>카테고리별 지출</h2></div>
-                <div class="donut-wrap"><svg class="donut" viewBox="0 0 150 150" id="b-donut"></svg><div style="width:100%" id="b-cat-legend"></div></div>
-              </div>
-              <div class="box"><div class="box-head"><h2>💡 절약 인사이트</h2></div><div class="box-body" id="b-insights"></div></div>
-            </div>
-          </div>
-
-          <!-- 사용내역 탭 -->
-          <div id="budget-tab-transactions" style="display:none;">
-            <!-- 검색 -->
-            <div style="position:relative;margin-bottom:10px;">
-              <input type="text" id="b-search-input" placeholder="🔍 내역명, 카테고리 검색..." oninput="applyFilters()"
-                style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
-            </div>
-            <!-- 뷰 전환 + 수입/지출 필터 -->
-            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-                <button id="tx-view-list" onclick="switchTxView('list')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
-                <button id="tx-view-cal" onclick="switchTxView('calendar')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
-              </div>
-              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-                <button id="f-all" onclick="setTypeFilter('')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">전체</button>
-                <button id="f-income" onclick="setTypeFilter('수입')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">수입</button>
-                <button id="f-expense" onclick="setTypeFilter('지출')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">지출</button>
-              </div>
-              <input type="hidden" id="b-filter-type-sel" value="">
-            </div>
-            <!-- 카테고리 필터 칩 -->
-            <div id="b-cat-filters" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;min-height:28px;"></div>
-            <!-- 필터 결과 요약 -->
-            <div id="b-filter-summary" style="display:none;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
-            <!-- 목록/달력 뷰 -->
-            <div id="b-tx-list-view"><div class="box"><div id="b-tx-list"></div></div></div>
-            <div id="b-tx-cal-view" style="display:none;">
-              <div class="box"><div id="b-tx-calendar" style="padding:16px;"></div></div>
-              <div class="box" style="margin-top:12px;display:none;" id="b-cal-detail-box">
-                <div class="box-head"><h2 id="b-cal-detail-title"></h2></div>
-                <div id="b-cal-detail-list"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 고정지출 탭 -->
-          <div id="budget-tab-fixed" style="display:none;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-              <div><div style="font-size:13px;color:var(--text-sub);">매달 자동으로 나가는 고정지출</div>
-                <div style="font-size:20px;font-weight:600;color:var(--red);margin-top:4px;" id="b-fixed-total">—</div></div>
-              <button id="btn-add-fixed" class="btn btn-primary">+ 추가</button>
-            </div>
-            <div id="b-fixed-list"></div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- 내집마련 -->
   <div class="page" id="page-home">
     <div class="page-header">
       <h1>🏠 내집마련 시뮬레이터</h1>
@@ -718,7 +601,123 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       </div>
     </div>
   </div>
+</main>
 
+  <!-- 가계부 -->
+  <div class="page" id="page-budget" style="padding:0;max-width:100%;width:100%;">
+    <div style="display:grid;grid-template-columns:220px 1fr;height:100vh;overflow:hidden;">
+
+      <!-- 좌측 월별 패널 -->
+      <div style="background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
+          <button id="btn-add-expense" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--red);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">− 지출 추가</button>
+          <button id="btn-add-income" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">+ 수입 추가</button>
+        </div>
+        <div id="budget-month-list" style="flex:1;overflow-y:auto;padding:6px 0;"></div>
+      </div>
+
+      <!-- 우측 메인 -->
+      <div style="display:flex;flex-direction:column;overflow:hidden;">
+        <!-- 탭바 -->
+        <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+          <div style="display:flex;">
+            <button class="budget-tab active" id="btab-overview" onclick="switchBudgetTab('overview')">📊 대시보드</button>
+            <button class="budget-tab" id="btab-transactions" onclick="switchBudgetTab('transactions')">📋 사용내역</button>
+            <button class="budget-tab" id="btab-fixed" onclick="switchBudgetTab('fixed')">📌 고정지출</button>
+          </div>
+          <div id="budget-period-label" style="font-size:12px;color:var(--text-muted);"></div>
+        </div>
+
+        <!-- 컨텐츠 -->
+        <div style="flex:1;overflow-y:auto;padding:20px 24px;" id="budget-content">
+
+          <!-- 대시보드 탭 -->
+          <div id="budget-tab-overview">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
+              <div class="card accent" style="padding:14px 16px;"><div class="label">수입</div><div class="value" id="b-income" style="font-size:16px;">—</div><div class="sub" id="b-income-sub"></div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">고정지출</div><div class="value" id="b-fixed" style="font-size:16px;">—</div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">사용 가능</div><div class="value" id="b-usable" style="font-size:16px;">—</div><div class="sub">수입−고정</div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">변동지출</div><div class="value" id="b-variable" style="font-size:16px;">—</div><div class="sub" id="b-variable-sub"></div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">남은 돈</div><div class="value" id="b-remain" style="font-size:16px;">—</div><div class="sub" id="b-remain-sub"></div></div>
+            </div>
+            <!-- 예산 바 -->
+            <div class="box" style="margin-bottom:16px;">
+              <div class="box-head"><h2>예산 현황</h2></div>
+              <div class="box-body" style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">남은 예산 (사용가능 − 변동지출)</span><span id="b-var-label" style="font-weight:500;"></span></div>
+                  <div style="height:12px;background:var(--surface3);border-radius:6px;overflow:hidden;position:relative;">
+                    <div id="b-spent-bar" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--orange),var(--red));border-radius:6px;transition:width 0.5s;width:0%;"></div>
+                    <div id="b-remain-bar" style="position:absolute;right:0;top:0;height:100%;background:linear-gradient(90deg,var(--accent),#22d3ee);border-radius:6px;transition:width 0.5s;width:100%;"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px;"><span id="b-spent-lbl"></span><span id="b-remain-lbl"></span></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">전체지출 / 수입</span><span id="b-total-label" style="font-weight:500;"></span></div>
+                  <div class="liq-bg"><div id="b-total-bar" class="liq-fill" style="width:0%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="g2">
+              <div class="box"><div class="box-head"><h2>카테고리별 지출</h2></div>
+                <div class="donut-wrap"><svg class="donut" viewBox="0 0 150 150" id="b-donut"></svg><div style="width:100%" id="b-cat-legend"></div></div>
+              </div>
+              <div class="box"><div class="box-head"><h2>💡 절약 인사이트</h2></div><div class="box-body" id="b-insights"></div></div>
+            </div>
+          </div>
+
+          <!-- 사용내역 탭 -->
+          <div id="budget-tab-transactions" style="display:none;">
+            <!-- 검색 -->
+            <div style="position:relative;margin-bottom:10px;">
+              <input type="text" id="b-search-input" placeholder="🔍 내역명, 카테고리 검색..." oninput="applyFilters()"
+                style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+            </div>
+            <!-- 뷰 전환 + 수입/지출 필터 -->
+            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <button id="tx-view-list" onclick="switchTxView('list')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
+                <button id="tx-view-cal" onclick="switchTxView('calendar')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
+              </div>
+              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <button id="f-all" onclick="setTypeFilter('')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">전체</button>
+                <button id="f-income" onclick="setTypeFilter('수입')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">수입</button>
+                <button id="f-expense" onclick="setTypeFilter('지출')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">지출</button>
+              </div>
+              <input type="hidden" id="b-filter-type-sel" value="">
+            </div>
+            <!-- 카테고리 필터 칩 -->
+            <div id="b-cat-filters" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;min-height:28px;"></div>
+            <!-- 필터 결과 요약 -->
+            <div id="b-filter-summary" style="display:none;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+            <!-- 목록/달력 뷰 -->
+            <div id="b-tx-list-view"><div class="box"><div id="b-tx-list"></div></div></div>
+            <div id="b-tx-cal-view" style="display:none;">
+              <div class="box"><div id="b-tx-calendar" style="padding:16px;"></div></div>
+              <div class="box" style="margin-top:12px;display:none;" id="b-cal-detail-box">
+                <div class="box-head"><h2 id="b-cal-detail-title"></h2></div>
+                <div id="b-cal-detail-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 고정지출 탭 -->
+          <div id="budget-tab-fixed" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+              <div><div style="font-size:13px;color:var(--text-sub);">매달 자동으로 나가는 고정지출</div>
+                <div style="font-size:20px;font-weight:600;color:var(--red);margin-top:4px;" id="b-fixed-total">—</div></div>
+              <button id="btn-add-fixed" class="btn btn-primary">+ 추가</button>
+            </div>
+            <div id="b-fixed-list"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 내집마련 -->
   <!-- MODAL -->
   <!-- 자산 추가/수정 모달 -->
   <div class="modal-bg" id="modal-bg">
