@@ -1573,13 +1573,15 @@ function renderCalendar(filtered) {
       const inRange = dateStr >= start && dateStr <= end;
       const dayData = byDate[dateStr]||{exp:0,inc:0};
       const hasData = inRange && (dayData.exp>0||dayData.inc>0);
+      const isFiltered = activeCatFilters.size > 0 || (document.getElementById('b-filter-type')?.value) || (document.getElementById('b-search')?.value?.trim());
+      const dimmed = inRange && isFiltered && !hasData;
       html+=`<div onclick="${hasData?`showDayDetail('${dateStr}')`:''}" style="
         padding:4px 2px;border-radius:6px;cursor:${hasData?'pointer':'default'};
         background:${!inRange?'rgba(255,255,255,0.02)':hasData?'var(--surface3)':'var(--surface2)'};
         border:1px solid ${!inRange?'transparent':hasData?'var(--border2)':'var(--border)'};
-        opacity:${inRange?1:0.3};
+        opacity:${!inRange?0.3:dimmed?0.2:1};
         min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
-        <div style="font-size:12px;color:${inRange?'var(--text)':'var(--text-muted)'};">${d}</div>
+        <div style="font-size:12px;color:${inRange&&!dimmed?'var(--text)':'var(--text-muted)'};">${d}</div>
         ${inRange&&dayData.inc>0?`<div style="font-size:10px;color:var(--accent);font-weight:500;">+${(dayData.inc/10000).toFixed(0)}만</div>`:''}
         ${inRange&&dayData.exp>0?`<div style="font-size:10px;color:var(--red);">-${(dayData.exp/10000).toFixed(0)}만</div>`:''}
       </div>`;
