@@ -55,7 +55,7 @@ nav{width:var(--nav-w);min-height:100vh;background:var(--surface);border-right:1
 
 /* MAIN */
 main{margin-left:var(--nav-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
-.page{display:none;padding:36px 40px 80px;max-width:1100px;}
+.page{display:none;padding:36px 40px 80px;max-width:1100px;margin-left:0;margin-right:auto;}
 .page.active{display:block;}
 
 /* PAGE HEADER */
@@ -2290,17 +2290,15 @@ async function loadHomeData() {
 }
 
 function getAssetValueAtDate(asset, dateStr) {
-  // 날짜 기준으로 자산 가치 계산
   const targetDate = new Date(dateStr + '-01');
-  const now = new Date();
-  
   if (asset.maturity_date) {
     const maturity = new Date(asset.maturity_date);
     if (targetDate >= maturity) {
-      // 만기 이후 → 정상 금액
       return { amount: asset.amount, liquidity: '유동', matured: true };
     }
   }
+  // 만기 전이면 liquidity 그대로
+  if (asset.liquidity === '불가') return { amount: asset.amount, liquidity: '불가', matured: false };
   return { amount: asset.amount, liquidity: asset.liquidity, matured: false };
 }
 
@@ -2311,17 +2309,15 @@ function getDiaLiquidity(asset, dateStr) {
   if (asset.type === '국내주식' || asset.type === '해외주식') return '유동';
   if (asset.type === '전세') {
     if (asset.maturity) {
-      const mat = new Date(asset.maturity);
+      const mat = new Date(asset.maturity.substring(0,7) + '-01');
       return target >= mat ? '유동' : '비유동';
     }
     return '비유동';
   }
   if (asset.type === '적금') {
-    if (asset.name.includes('청년도약')) {
-      if (asset.maturity) {
-        const mat = new Date(asset.maturity);
-        return target >= mat ? '유동' : '비유동';
-      }
+    if (asset.maturity) {
+      const mat = new Date(asset.maturity.substring(0,7) + '-01');
+      return target >= mat ? '유동' : '비유동';
     }
     return '비유동';
   }
@@ -2403,15 +2399,16 @@ function renderHomeAssets() {
     itemsDiv.style.display = 'block';
 
     if (groupAssets.length > 1) {
-      header.onclick = isImpossibleGroup ? null : (e) => {
-        if (e.target === toggle || e.target === checkbox || e.target === checkbox.firstChild) {
-          toggleDiaGroup(group.key, groupAssets, dateStr);
-        } else {
-          itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
-          toggle.textContent = itemsDiv.style.display === 'none' ? '▶' : '▼';
-        }
+      // 헤더 클릭 → 펼치기/접기
+      header.onclick = isImpossibleGroup ? null : () => {
+        itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
+        toggle.textContent = itemsDiv.style.display === 'none' ? '▶' : '▼';
       };
-      checkbox.onclick = (e) => { e.stopPropagation(); toggleDiaGroup(group.key, groupAssets, dateStr); };
+      // 체크박스 클릭 → 선택/해제 (이벤트 전파 차단)
+      checkbox.onclick = isImpossibleGroup ? null : (e) => {
+        e.stopPropagation();
+        toggleDiaGroup(group.key, groupAssets, dateStr);
+      };
     } else {
       header.onclick = isImpossibleGroup ? null : () => toggleDiaGroup(group.key, groupAssets, dateStr);
     }
