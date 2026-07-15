@@ -760,7 +760,7 @@ async function fetchPrices() {
     }
     renderDashboard();
     renderAssets();
-    showToast('✓ 주가 업데이트됨', true);
+    // showToast('✓ 주가 업데이트됨', true); // 토스트 비활성화
   } catch(e) {
     console.warn('주가 fetch 실패:', e);
     showToast('주가 업데이트 실패 — 나중에 다시 시도할게요');
@@ -1561,8 +1561,14 @@ function renderCalendar(filtered) {
       <div style="font-size:13px;font-weight:500;color:var(--text-sub);margin-bottom:10px;">${monthLabel}</div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;">`;
     days.forEach(d => { html+=`<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">${d}</div>`; });
-    for (let i=0;i<firstDay;i++) html+='<div></div>';
-    for (let d=1;d<=daysInMonth;d++) {
+    // 시작일이 속한 주의 시작(일요일)부터만 표시
+    const cycleStartDate = new Date(start);
+    const isFirstMonth = (y === cycleStartDate.getFullYear() && m === cycleStartDate.getMonth());
+    const startDay = isFirstMonth ? cycleStartDate.getDate() : 1;
+    // 시작일의 요일만큼 빈칸
+    const startDayOfWeek = isFirstMonth ? new Date(y, m, startDay).getDay() : firstDay;
+    for (let i=0;i<startDayOfWeek;i++) html+='<div></div>';
+    for (let d=isFirstMonth?startDay:1;d<=daysInMonth;d++) {
       const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const inRange = dateStr >= start && dateStr <= end;
       const dayData = byDate[dateStr]||{exp:0,inc:0};
