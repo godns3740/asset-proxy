@@ -2047,6 +2047,12 @@ async function renderBudgetPage() {
   switchBudgetTab('overview');
 }
 
+function fmtNum(el) {
+  const raw = el.value.replace(/[^0-9]/g, '');
+  el.dataset.raw = raw;
+  el.value = raw ? parseInt(raw).toLocaleString('ko-KR') : '';
+}
+
 // ─── INIT ─────────────────────────────────────────────────────
 async function handleRefresh() {
   if (!PROXY_BASE_URL) {
