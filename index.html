@@ -1485,13 +1485,10 @@ function toggleCatFilter(cat) {
   renderCatFilters(byCat);
 }
 
-function renderTxList() {
+function renderTxList(filtered) {
   const txList = document.getElementById('b-tx-list');
   if (!txList) return;
-  const filterType = document.getElementById('b-filter-type-sel')?.value || '';
-  let filtered = [...transactions];
-  if (filterType) filtered = filtered.filter(t=>t.type===filterType);
-  if (activeCatFilters.size>0) filtered = filtered.filter(t=>activeCatFilters.has(t.category));
+  if (!filtered) filtered = getFilteredTx();
   
   if (filtered.length===0) { txList.innerHTML='<div class="empty"><div class="em-icon">💸</div><p>거래 내역이 없어요</p></div>'; return; }
   
@@ -1519,6 +1516,30 @@ function renderTxList() {
       </div>`).join('')}
     </div>`;
   }).join('');
+}
+
+function applyFilters() {
+  const filtered = getFilteredTx();
+  const sumEl = document.getElementById('b-filter-summary');
+  if (sumEl) {
+    const totalExp = filtered.filter(t=>t.type==='지출').reduce((s,t)=>s+t.amount,0);
+    const totalInc = filtered.filter(t=>t.type==='수입').reduce((s,t)=>s+t.amount,0);
+    const filterType = document.getElementById('b-filter-type-sel')?.value||'';
+    const search = document.getElementById('b-search-input')?.value?.trim()||'';
+    const isFiltered = activeCatFilters.size>0 || filterType || search;
+    if (isFiltered && filtered.length>0) {
+      sumEl.style.display='block';
+      let txt=filtered.length+'건';
+      if(totalExp>0) txt+=' · 지출 <strong style="color:var(--red)">'+W(totalExp)+'</strong>';
+      if(totalInc>0) txt+=' · 수입 <strong style="color:var(--accent)">'+W(totalInc)+'</strong>';
+      sumEl.innerHTML=txt;
+    } else { sumEl.style.display='none'; }
+  }
+  const byCat={};
+  transactions.filter(t=>t.type==='지출').forEach(t=>{if(!byCat[t.category])byCat[t.category]=0;byCat[t.category]+=t.amount;});
+  renderCatFilters(byCat);
+  if(currentTxView==='list') renderTxList(filtered);
+  else renderCalendar(filtered);
 }
 
 function getFilteredTx() {
