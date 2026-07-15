@@ -1576,7 +1576,7 @@ function renderMonthList() {
       const cyVar = cyTxs.filter(t=>t.type==='지출').reduce((s,t)=>s+t.amount,0);
       if (cyTxs.length > 0) remain = cyIncome - cyFixed - cyVar;
     } catch(e) {}
-    return '<div onclick="selectBudgetMonth('' + cycle.value + '')" style="padding:11px 14px;cursor:pointer;border-left:2px solid ' + (isActive?'var(--accent)':'transparent') + ';background:' + (isActive?'var(--accent-dim)':'transparent') + ';transition:all 0.15s;">' +
+    return '<div onclick="selectBudgetMonth(' + "'" + cycle.value + "'" + ')" style="padding:11px 14px;cursor:pointer;border-left:2px solid ' + (isActive?'var(--accent)':'transparent') + ';background:' + (isActive?'var(--accent-dim)':'transparent') + ';transition:all 0.15s;">' +
       '<div style="font-size:13px;font-weight:' + (isActive?'600':'400') + ';color:' + (isActive?'var(--accent)':'var(--text-sub)') + ';">' + cycle.label + '</div>' +
       '<div style="font-size:11px;margin-top:2px;color:' + (remain===null?'var(--text-muted)':remain>=0?'var(--accent)':'var(--red)') + ';">' +
       (remain===null ? '기록 없음' : remain>=0 ? '남은돈 '+W(remain) : '초과 '+W(Math.abs(remain))) + '</div></div>';
