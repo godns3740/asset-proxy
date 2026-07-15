@@ -1972,22 +1972,46 @@ function filterCatDropdown(query) {
   renderCatDropdown(cats, query);
 }
 function renderCatDropdown(cats, query) {
-  const dd = document.getElementById('t-cat-dropdown'); if(!dd) return;
-  if (cats.length===0 && !query) { dd.style.display='none'; return; }
+  const dd = document.getElementById('t-cat-dropdown');
+  if (!dd) return;
+  if (cats.length === 0 && !query) { dd.style.display = 'none'; return; }
   dd.style.display = 'block';
-  let html = '<div style="padding:8px;display:flex;flex-wrap:wrap;gap:5px;">';
-  html += cats.map(cat =>
-    '<div style="display:flex;align-items:center;border-radius:18px;overflow:hidden;border:1px solid '+cat.color+'33;background:'+cat.color+'15;">' +
-    '<span onclick="selectCategory(''+cat.name+'',''+cat.color+'','+cat.id+')" style="display:flex;align-items:center;gap:5px;padding:4px 8px;cursor:pointer;font-size:12px;color:'+cat.color+';">' +
-    '<span style="width:6px;height:6px;border-radius:50%;background:'+cat.color+';flex-shrink:0;"></span>'+cat.name+'</span>' +
-    '<span onclick="event.stopPropagation();openCatMenu(event,'+cat.id+',''+cat.name+'',''+cat.color+'')" style="padding:4px 7px 4px 2px;cursor:pointer;color:'+cat.color+';opacity:0.5;font-size:11px;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.5">•••</span>' +
-    '</div>'
-  ).join('');
-  html += '</div>';
-  if (query && !cats.find(c=>c.name===query)) {
-    html += '<div onclick="createCat(''+query+'')" style="padding:7px 12px;cursor:pointer;color:var(--accent);font-size:12px;border-top:1px solid var(--border);" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">+ "'+query+'" 새 카테고리로 추가</div>';
+  dd.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'padding:8px;display:flex;flex-wrap:wrap;gap:5px;';
+
+  cats.forEach(cat => {
+    const outer = document.createElement('div');
+    outer.style.cssText = 'display:flex;align-items:center;border-radius:18px;overflow:hidden;border:1px solid '+cat.color+'33;background:'+cat.color+'15;';
+    const nameSpan = document.createElement('span');
+    nameSpan.onclick = () => selectCategory(cat.name, cat.color, cat.id);
+    nameSpan.style.cssText = 'display:flex;align-items:center;gap:5px;padding:4px 8px;cursor:pointer;font-size:12px;color:'+cat.color+';';
+    const dot = document.createElement('span');
+    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:'+cat.color+';flex-shrink:0;';
+    nameSpan.appendChild(dot);
+    nameSpan.appendChild(document.createTextNode(cat.name));
+    const menuBtn = document.createElement('span');
+    menuBtn.onclick = (e) => { e.stopPropagation(); openCatMenu(e, cat.id, cat.name, cat.color); };
+    menuBtn.style.cssText = 'padding:4px 7px 4px 2px;cursor:pointer;color:'+cat.color+';opacity:0.5;font-size:11px;';
+    menuBtn.onmouseenter = () => menuBtn.style.opacity = '1';
+    menuBtn.onmouseleave = () => menuBtn.style.opacity = '0.5';
+    menuBtn.textContent = '•••';
+    outer.appendChild(nameSpan);
+    outer.appendChild(menuBtn);
+    wrap.appendChild(outer);
+  });
+  dd.appendChild(wrap);
+
+  if (query && !cats.find(cat => cat.name === query)) {
+    const addDiv = document.createElement('div');
+    addDiv.onclick = () => createCat(query);
+    addDiv.style.cssText = 'padding:7px 12px;cursor:pointer;color:var(--accent);font-size:12px;border-top:1px solid var(--border);';
+    addDiv.onmouseenter = () => addDiv.style.background = 'var(--surface2)';
+    addDiv.onmouseleave = () => addDiv.style.background = '';
+    addDiv.innerHTML = '+ "<strong>' + query + '</strong>" 새 카테고리로 추가';
+    dd.appendChild(addDiv);
   }
-  dd.innerHTML = html;
 }
 function selectCategory(name, color, id) {
   document.getElementById('t-category').value = name;
