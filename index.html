@@ -728,7 +728,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
                 <div style="font-size:15px;font-weight:600;color:var(--orange);" id="plan-monthly-fixed">—</div>
               </div>
               <div style="text-align:center;">
-                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">월 가처분 소득</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">월 남은 돈 <span style="font-size:10px;">(수입 - 대출 - 고정지출)</span></div>
                 <div style="font-size:20px;font-weight:700;" id="plan-disposable">—</div>
               </div>
             </div>
@@ -2904,7 +2904,7 @@ function recalcWithCosts() {
     effEl.textContent = W(Math.max(0, effective));
     effEl.style.color = effective >= 0 ? 'var(--accent)' : 'var(--red)';
   }
-  // 자동 계산 박스도 업데이트
+  // 자동 계산 박스 업데이트
   const effectiveMoney = Math.max(0, effective);
   const housePriceAuto = Math.floor(effectiveMoney / 0.3);
   const maxLoanAuto = Math.min(Math.floor(housePriceAuto * 0.7), SAMSUNG_MAX_LOAN);
@@ -2916,23 +2916,27 @@ function recalcWithCosts() {
   set('plan-house-price', W(housePriceFinal));
   set('plan-tax', W(taxes.total));
   set('plan-tax-detail', '취득세 '+W(taxes.tax)+' + 등록비 '+W(taxes.regFee)+' + 중개 '+W(taxes.agentFee));
-  // 슬라이더도 업데이트
+  // 슬라이더 초기값도 효과적 집값으로 업데이트
   const slider = document.getElementById('plan-price-slider');
   if (slider) {
-    const sv = parseInt(slider.value);
-    const ourM = getEffectiveMoney();
-    const need = Math.round(sv*0.3);
-    const loan = Math.min(Math.round(sv*0.7), SAMSUNG_MAX_LOAN);
+    const newSliderVal = Math.min(Math.max(housePriceFinal, 300000000), 1000000000);
+    slider.value = newSliderVal;
+    const lbl = document.getElementById('slider-price-label');
+    if (lbl) lbl.textContent = (newSliderVal/100000000).toFixed(1) + '억원';
+    // 슬라이더 기준 비교 업데이트
+    const ourM = effectiveMoney;
+    const need = Math.round(newSliderVal*0.3);
+    const loan = Math.min(Math.round(newSliderVal*0.7), SAMSUNG_MAX_LOAN);
     const diff = ourM - need;
     const { pmt } = calcLoanPayment(loan);
     const set2 = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-    set2('cmp-house', W(sv));
+    set2('cmp-house', W(newSliderVal));
     set2('cmp-need', W(need));
     const diffEl2 = document.getElementById('cmp-need-diff');
     if(diffEl2){diffEl2.textContent=diff>=0?'+'+W(diff)+' 여유':W(Math.abs(diff))+' 부족';diffEl2.style.color=diff>=0?'var(--accent)':'var(--red)';}
     set2('cmp-loan', W(loan));
     set2('cmp-monthly', W(pmt)+'/월');
-    updateMonthlyCalc(sv);
+    updateMonthlyCalc(newSliderVal);
   }
 }
 
