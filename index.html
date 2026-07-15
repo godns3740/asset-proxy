@@ -634,12 +634,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
             <div>
               <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">🎨 인테리어 비용</label>
-              <input type="text" inputmode="numeric" id="cost-interior" placeholder="0원" class="num-input" oninput="fmtNum(this);recalcWithCosts()"
+              <input type="text" inputmode="numeric" id="cost-interior" placeholder="0원" class="num-input" id_fmt="true"
                 style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;box-sizing:border-box;">
             </div>
             <div>
               <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">📺 가전/가구 비용</label>
-              <input type="text" inputmode="numeric" id="cost-appliance" placeholder="0원" class="num-input" oninput="fmtNum(this);recalcWithCosts()"
+              <input type="text" inputmode="numeric" id="cost-appliance" placeholder="0원" class="num-input" id_fmt="true"
                 style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;box-sizing:border-box;">
             </div>
           </div>
@@ -3067,6 +3067,12 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   renderAssets();
   if (PROXY_BASE_URL) fetchPrices();
 
+  // 추가비용 입력 이벤트
+  ['cost-interior','cost-appliance','plan-new-fixed-amt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', function(){ fmtNum(this); if(id.startsWith('cost')) recalcWithCosts(); });
+  });
+
   // 매매계획 고정지출 편집 모달
   document.getElementById('plan-fixed-modal')?.addEventListener('click', e => { if(e.target===e.currentTarget) closePlanFixedEditor(); });
 
@@ -3105,6 +3111,12 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
     }
   });
   
+  // 추가비용 입력 이벤트
+  ['cost-interior','cost-appliance','plan-new-fixed-amt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', function(){ fmtNum(this); if(id.startsWith('cost')) recalcWithCosts(); });
+  });
+
   // 매매계획 고정지출 편집 모달
   document.getElementById('plan-fixed-modal')?.addEventListener('click', e => { if(e.target===e.currentTarget) closePlanFixedEditor(); });
 
