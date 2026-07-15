@@ -218,6 +218,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   #page-budget > div { grid-template-columns: 1fr !important; }
   #page-budget > div > div:first-child { display: none; }
 }
+.payment-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:20px;padding:5px 12px;font-size:12px;font-family:inherit;cursor:pointer;transition:all 0.15s;}
+.payment-btn.active,.payment-btn:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;z-index:300;transition:transform 0.3s;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
 .toast.show{transform:translateX(-50%) translateY(0);}
@@ -513,121 +515,115 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   </div>
 
 <!-- MODAL -->
-  <!-- 자산 추가/수정 모달 -->
-  <div class="modal-bg" id="modal-bg">
-    <div class="modal">
-      <h3 id="modal-title">자산 추가</h3>
-      <div class="form-grid">
-        <div class="form-group form-full"><label>자산명</label><input type="text" id="f-name" placeholder="예: 신한 정기적금"></div>
-        <div class="form-group"><label>종류</label>
-          <select id="f-type" onchange="toggleStockFields(this.value)">
-            <option value="현금">현금</option><option value="국내주식">국내주식</option>
-            <option value="해외주식">해외주식</option><option value="적금">적금</option>
-            <option value="퇴직연금">퇴직연금</option><option value="전세">전세</option><option value="기타">기타</option>
-          </select>
-        </div>
-        <div class="form-group"><label>상태</label>
-          <select id="f-status"><option value="운용중">운용중</option><option value="만기완료">만기완료</option><option value="해지">해지</option></select>
-        </div>
-        <div class="form-group"><label>현재 금액 (원)</label>
-          <input type="text" inputmode="numeric" id="f-amount" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group"><label>월 납입액 (원)</label>
-          <input type="text" inputmode="numeric" id="f-monthly" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group"><label>이자율 (연 %)</label>
-          <input type="text" inputmode="decimal" id="f-rate" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group"><label>시작일</label><input type="date" id="f-start"></div>
-        <div class="form-group"><label>만기일</label><input type="date" id="f-maturity"></div>
-        <div class="form-group form-full"><label>메모</label><input type="text" id="f-memo" placeholder="메모"></div>
-        <div class="form-group" id="f-avgprice-group"><label>평균단가 (원)</label>
-          <input type="text" inputmode="numeric" id="f-avgprice" placeholder="0" class="num-input" oninput="fmtNum(this)">
-        </div>
-        <div class="form-group" id="f-quantity-group"><label>보유수량</label>
-          <input type="text" inputmode="decimal" id="f-quantity" placeholder="0">
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeModal()">취소</button>
-        <button class="btn btn-primary" onclick="saveAsset()">저장</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 거래 추가/수정 모달 -->
   <div class="modal-bg" id="tx-modal-bg">
-    <div class="modal" style="width:520px;max-width:95vw;">
-      <!-- 수입/지출 토글 -->
-      <div style="display:flex;gap:0;margin-bottom:20px;background:var(--surface2);border-radius:10px;padding:3px;">
-        <button id="t-type-expense" onclick="setTxType('지출')" style="flex:1;padding:9px;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;background:var(--red);color:#fff;transition:all 0.15s;">지출</button>
-        <button id="t-type-income" onclick="setTxType('수입')" style="flex:1;padding:9px;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;background:transparent;color:var(--text-muted);transition:all 0.15s;">수입</button>
+    <div class="modal" style="width:480px;max-width:96vw;padding:0;overflow:hidden;border-radius:16px;">
+      
+      <!-- 수입/지출 토글 헤더 -->
+      <div style="display:flex;border-bottom:1px solid var(--border);">
+        <button id="t-type-expense" onclick="setTxType('지출')" style="flex:1;padding:16px;border:none;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;background:var(--red);color:#fff;transition:all 0.15s;">− 지출</button>
+        <button id="t-type-income" onclick="setTxType('수입')" style="flex:1;padding:16px;border:none;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;background:var(--surface2);color:var(--text-muted);transition:all 0.15s;">+ 수입</button>
       </div>
       <input type="hidden" id="t-type" value="지출">
 
-      <!-- 금액 (크게) -->
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;">금액</div>
-        <input type="text" inputmode="numeric" id="t-amount" placeholder="0원"
-          style="font-size:32px;font-weight:600;width:100%;text-align:center;background:transparent;border:none;border-bottom:2px solid var(--border);color:var(--text);font-family:inherit;padding:8px 0;outline:none;"
-          oninput="fmtNum(this)" onfocus="this.style.borderBottomColor='var(--accent)'" onblur="this.style.borderBottomColor='var(--border)'">
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <!-- 날짜 -->
-        <div class="form-group">
-          <label>날짜</label>
-          <input type="date" id="t-date" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;width:100%;cursor:pointer;appearance:none;-webkit-appearance:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
+      <div style="padding:20px 24px;">
+        <!-- 금액 크게 -->
+        <div style="text-align:center;margin-bottom:24px;">
+          <input type="text" inputmode="numeric" id="t-amount" placeholder="0원"
+            style="font-size:36px;font-weight:700;width:100%;text-align:center;background:transparent;border:none;border-bottom:2px solid var(--border);color:var(--text);font-family:inherit;padding:8px 0;outline:none;transition:border-color 0.2s;"
+            oninput="fmtNum(this)"
+            onfocus="this.style.borderBottomColor='var(--accent)'"
+            onblur="this.style.borderBottomColor='var(--border)'">
         </div>
+
+        <!-- 날짜 커스텀 피커 -->
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">날짜</label>
+          <div id="t-date-display" onclick="toggleDatePicker()" style="background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:14px;">
+            <span id="t-date-text">오늘</span>
+            <span style="color:var(--text-muted);font-size:12px;">📅</span>
+          </div>
+          <input type="hidden" id="t-date">
+          <!-- 날짜 피커 드롭다운 -->
+          <div id="t-date-picker" style="display:none;position:absolute;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:16px;z-index:150;box-shadow:0 8px 32px rgba(0,0,0,0.5);width:280px;margin-top:4px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <button onclick="changePickerMonth(-1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px;">‹</button>
+              <span id="picker-month-label" style="font-size:14px;font-weight:500;"></span>
+              <button onclick="changePickerMonth(1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:16px;">›</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--text-muted);padding:4px;">일</div>
+              <div style="font-size:11px;color:var(--text-muted);padding:4px;">월</div>
+              <div style="font-size:11px;color:var(--text-muted);padding:4px;">화</div>
+              <div style="font-size:11px;color:var(--text-muted);padding:4px;">수</div>
+              <div style="font-size:11px;color:var(--text-muted);padding:4px;">목</div>
+              <div style="font-size:11px;color:var(--text-muted);padding:4px;">금</div>
+              <div style="font-size:11px;color:var(--text-muted);padding:4px;">토</div>
+            </div>
+            <div id="picker-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;"></div>
+            <div style="margin-top:10px;display:flex;gap:6px;">
+              <button onclick="selectToday()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px;cursor:pointer;font-size:12px;font-family:inherit;">오늘</button>
+              <button onclick="selectYesterday()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px;cursor:pointer;font-size:12px;font-family:inherit;">어제</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 내역명 -->
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">내역명</label>
+          <input type="text" id="t-memo" placeholder="예: 스타벅스 아메리카노"
+            style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;border-radius:9px;outline:none;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
+        </div>
+
+        <!-- 카테고리 -->
+        <div style="margin-bottom:14px;position:relative;">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">카테고리</label>
+          <!-- 선택된 칩 표시 -->
+          <div id="t-cat-selected" style="display:none;margin-bottom:8px;">
+            <span id="t-cat-chip" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;" onclick="clearCatSelection()">
+              <span id="t-cat-chip-dot" style="width:8px;height:8px;border-radius:50%;"></span>
+              <span id="t-cat-chip-name"></span>
+              <span style="color:rgba(255,255,255,0.6);font-size:15px;line-height:1;">×</span>
+            </span>
+          </div>
+          <!-- 검색 입력 -->
+          <input type="text" id="t-cat-input" placeholder="검색하거나 직접 입력..."
+            style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;border-radius:9px;outline:none;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='var(--accent)';showCatSuggestions()"
+            onblur="this.style.borderColor='var(--border2)'"
+            oninput="filterCatSuggestions()">
+          <input type="hidden" id="t-category">
+          <!-- 카테고리 칩 목록 -->
+          <div id="t-cat-dropdown" style="display:none;margin-top:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;overflow:hidden;max-height:200px;overflow-y:auto;"></div>
+        </div>
+
         <!-- 결제수단 -->
-        <div class="form-group">
-          <label>결제수단</label>
-          <select id="t-payment" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;width:100%;">
-            <option>계좌이체</option><option>체크카드</option><option>신용카드</option>
-            <option>카카오페이</option><option>토스</option><option>신한</option>
-          </select>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">결제수단</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="payment-btn active" onclick="selectPayment(this,'계좌이체')">계좌이체</button>
+            <button class="payment-btn" onclick="selectPayment(this,'체크카드')">체크카드</button>
+            <button class="payment-btn" onclick="selectPayment(this,'카카오페이')">카카오페이</button>
+            <button class="payment-btn" onclick="selectPayment(this,'토스')">토스</button>
+            <button class="payment-btn" onclick="selectPayment(this,'신용카드')">신용카드</button>
+          </div>
+          <input type="hidden" id="t-payment" value="계좌이체">
         </div>
-      </div>
 
-      <!-- 내역명 -->
-      <div class="form-group" style="margin-bottom:12px;">
-        <label>내역명</label>
-        <input type="text" id="t-memo" placeholder="예: 스타벅스 아메리카노" autocomplete="off"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;">
-      </div>
-
-      <!-- 카테고리 자동완성 -->
-      <div class="form-group" style="margin-bottom:12px;position:relative;">
-        <label>카테고리</label>
-        <input type="text" id="t-cat-input" placeholder="카테고리 검색 또는 입력..." autocomplete="off"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;"
-          oninput="filterCatSuggestions()" onfocus="showCatSuggestions()" onclick="showCatSuggestions()">
-        <input type="hidden" id="t-category" value="">
-        <!-- 선택된 카테고리 칩 -->
-        <div id="t-cat-selected" style="margin-top:8px;display:none;">
-          <span id="t-cat-chip" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:500;">
-            <span id="t-cat-chip-dot" style="width:8px;height:8px;border-radius:50%;"></span>
-            <span id="t-cat-chip-name"></span>
-            <span onclick="clearCatSelection()" style="cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;">×</span>
-          </span>
+        <!-- 고정지출 -->
+        <div id="t-fixed-row" style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:10px 14px;background:var(--surface2);border-radius:9px;cursor:pointer;" onclick="document.getElementById('t-fixed').click()">
+          <input type="checkbox" id="t-fixed" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+          <span style="font-size:13px;color:var(--text-sub);">매달 반복되는 고정지출</span>
         </div>
-        <!-- 드롭다운 -->
-        <div id="t-cat-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:10px;z-index:100;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px;"></div>
-      </div>
 
-      <!-- 고정지출 체크박스 -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding:10px 14px;background:var(--surface2);border-radius:9px;">
-        <input type="checkbox" id="t-fixed" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent);">
-        <label for="t-fixed" style="font-size:13px;color:var(--text-sub);cursor:pointer;">고정지출 (매달 반복되는 지출)</label>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="btn-tx-cancel">취소</button>
-        <button class="btn btn-primary" id="btn-tx-save" style="min-width:80px;justify-content:center;">저장</button>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" id="btn-tx-cancel" style="flex:1;justify-content:center;">취소</button>
+          <button class="btn btn-primary" id="btn-tx-save" style="flex:2;justify-content:center;font-size:15px;font-weight:600;">저장</button>
+        </div>
       </div>
     </div>
   </div>
-
   <!-- 고정지출 모달 -->
   <div class="modal-bg" id="fixed-modal-bg">
     <div class="modal">
@@ -1291,7 +1287,7 @@ let categories = []; // DB에서 로드된 카테고리
 let activeCatFilters = new Set();
 let currentTxView = 'list';
 
-const BUDGET_CAT_COLORS = {
+const CAT_COLORS = {
   '생활비':'#94a3b8','고정지출':'#38bdf8','저축':'#4ade80','투자':'#fbbf24',
   '배달-점심':'#fb923c','배달-저녁':'#f97316','외식':'#f59e0b','커피/간식':'#a78bfa',
   '미용/쇼핑':'#f472b6','오락':'#c084fc','술약속':'#818cf8',
@@ -1361,8 +1357,8 @@ async function loadCategories() {
     const r = await fetch(`${PROXY_BASE_URL}/api/categories`);
     categories = await r.json();
     if (!Array.isArray(categories)) categories = [];
-    // BUDGET_BUDGET_CAT_COLORS 동적 업데이트
-    categories.forEach(cat => { BUDGET_BUDGET_CAT_COLORS[cat.name] = cat.color; });
+    // BUDGET_CAT_COLORS 동적 업데이트
+    categories.forEach(cat => { BUDGET_CAT_COLORS[cat.name] = cat.color; });
   } catch(e) { categories = []; }
 }
 
@@ -1370,21 +1366,18 @@ async function loadCategories() {
 function filterCatSuggestions() {
   const input = document.getElementById('t-cat-input');
   const type = document.getElementById('t-type')?.value || '지출';
-  const query = (input?.value || '').toLowerCase();
-  const filtered = query
-    ? categories.filter(c => c.type === type && c.name.toLowerCase().includes(query))
-    : categories.filter(c => c.type === type);
+  const query = input?.value.toLowerCase() || '';
+  const filtered = categories.filter(c => 
+    (c.type === type || type === '') && 
+    c.name.toLowerCase().includes(query)
+  );
   renderCatDropdown(filtered, query);
 }
 
 function showCatSuggestions() {
   const type = document.getElementById('t-type')?.value || '지출';
-  const input = document.getElementById('t-cat-input');
-  const query = (input?.value || '').toLowerCase();
-  const filtered = query 
-    ? categories.filter(c => c.type === type && c.name.toLowerCase().includes(query))
-    : categories.filter(c => c.type === type);
-  renderCatDropdown(filtered, query);
+  const filtered = categories.filter(c => c.type === type);
+  renderCatDropdown(filtered, '');
 }
 
 function renderCatDropdown(cats, query) {
@@ -1392,25 +1385,22 @@ function renderCatDropdown(cats, query) {
   if (!dd) return;
   if (cats.length === 0 && !query) { dd.style.display = 'none'; return; }
   dd.style.display = 'block';
-  
-  let html = cats.map(cat => `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s;"
-      onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''"
-      onclick="selectCategory('${cat.name}', '${cat.color}', ${cat.id})">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="width:10px;height:10px;border-radius:50%;background:${cat.color};flex-shrink:0;"></div>
-        <span style="font-size:13px;">${cat.name}</span>
-      </div>
-      <button onclick="event.stopPropagation();openCatEditMenu(event,${cat.id},'${cat.name}','${cat.color}')"
-        style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:13px;">•••</button>
+
+  // 칩 스타일 그리드
+  let html = '<div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px;">';
+  html += cats.map(cat => `
+    <div style="display:flex;align-items:center;gap:0;border-radius:20px;overflow:hidden;border:1px solid ${cat.color}33;background:${cat.color}18;">
+      <span onclick="selectCategory('${cat.name}','${cat.color}',${cat.id})" style="display:flex;align-items:center;gap:6px;padding:5px 10px;cursor:pointer;font-size:12px;font-weight:500;color:${cat.color};">
+        <span style="width:7px;height:7px;border-radius:50%;background:${cat.color};flex-shrink:0;"></span>
+        ${cat.name}
+      </span>
+      <span onclick="event.stopPropagation();openCatEditMenu(event,${cat.id},'${cat.name}','${cat.color}')" style="padding:5px 8px 5px 2px;cursor:pointer;color:${cat.color};opacity:0.5;font-size:12px;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.5">•••</span>
     </div>`).join('');
-  
-  // 새 카테고리 추가 옵션
-  if (query && !cats.find(c => c.name === query)) {
-    html += `<div style="padding:8px 12px;cursor:pointer;color:var(--accent);font-size:13px;border-top:1px solid var(--border);"
-      onclick="createAndSelectCategory('${query}')"
-      onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
-      + "${query}" 새 카테고리 추가
+  html += '</div>';
+
+  if (query && !cats.find(cat => cat.name === query)) {
+    html += `<div onclick="createAndSelectCategory('${query}')" style="padding:8px 12px;cursor:pointer;color:var(--accent);font-size:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;" onmouseenter="this.style.background='var(--surface3)'" onmouseleave="this.style.background=''">
+      <span style="font-size:16px;">+</span> "<strong>${query}</strong>" 새 카테고리로 추가
     </div>`;
   }
   dd.innerHTML = html;
@@ -1454,7 +1444,7 @@ async function createAndSelectCategory(name) {
     const data = await r.json();
     const newCat = Array.isArray(data) ? data[0] : data;
     categories.push(newCat);
-    BUDGET_BUDGET_CAT_COLORS[name] = color;
+    BUDGET_CAT_COLORS[name] = color;
     selectCategory(name, color, newCat.id);
   } catch(e) { selectCategory(name, color, null); }
 }
@@ -1687,14 +1677,14 @@ function renderBudget() {
     let off=0, paths='';
     const sorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
     sorted.forEach(([cat,amt])=>{
-      const color=BUDGET_CAT_COLORS[cat]||'#6b7280', pct=amt/expTotal, dash=pct*circ, gap=circ-dash;
+      const color=CAT_COLORS[cat]||'#6b7280', pct=amt/expTotal, dash=pct*circ, gap=circ-dash;
       paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;
       off+=dash;
     });
     donut.innerHTML=paths+`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="#8b8f9a" font-size="10" font-family="Pretendard,sans-serif">지출</text><text x="${cx}" y="${cy+10}" text-anchor="middle" fill="#f0f1f3" font-size="12" font-weight="600" font-family="Pretendard,sans-serif">${W(expTotal)}</text>`;
     if (legend) legend.innerHTML=sorted.map(([cat,amt])=>{
       const pct=(amt/expTotal*100).toFixed(1);
-      return `<div class="legend-item"><div class="leg-left"><div class="leg-dot" style="background:${BUDGET_CAT_COLORS[cat]||'#6b7280'}"></div>${cat}</div><div class="leg-right"><span class="leg-pct">${pct}%</span><span class="leg-val">${W(amt)}</span></div></div>`;
+      return `<div class="legend-item"><div class="leg-left"><div class="leg-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></div>${cat}</div><div class="leg-right"><span class="leg-pct">${pct}%</span><span class="leg-val">${W(amt)}</span></div></div>`;
     }).join('');
   } else if (donut) {
     donut.innerHTML='<text x="75" y="80" text-anchor="middle" fill="#555a66" font-size="12" font-family="Pretendard,sans-serif">데이터 없음</text>';
@@ -1730,7 +1720,7 @@ function renderCatFilters(byCat) {
   container.innerHTML = cats.map(cat => {
     const active = activeCatFilters.has(cat);
     return `<span onclick="toggleCatFilter('${cat}')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent-dim)':'transparent'};color:${active?'var(--accent)':'var(--text-muted)'};transition:all 0.15s;">
-      <span style="width:6px;height:6px;border-radius:50%;background:${BUDGET_CAT_COLORS[cat]||'#6b7280'};"></span>${cat}
+      <span style="width:6px;height:6px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};"></span>${cat}
     </span>`;
   }).join('');
 }
@@ -1768,7 +1758,7 @@ function renderTxList() {
       </div>
       ${txs.map(t=>`<div class="asset-row">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-          <div style="width:8px;height:8px;border-radius:50%;background:${BUDGET_CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
           <div style="min-width:0;"><div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.memo||t.category}</div>
           <div style="font-size:11px;color:var(--text-muted);">${t.category}${t.payment?' · '+t.payment:''}</div></div>
         </div>
@@ -1852,7 +1842,7 @@ function showDayDetail(dateStr) {
   if (detailTitle) detailTitle.textContent = dateStr + ' — 지출 ' + W(total);
   detailList.innerHTML = txs.map(t=>`<div class="asset-row">
     <div style="display:flex;align-items:center;gap:8px;flex:1;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${BUDGET_CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
       <div><div style="font-size:13px;">${t.memo||t.category}</div>
       <div style="font-size:11px;color:var(--text-muted);">${t.category}</div></div>
     </div>
@@ -1905,7 +1895,11 @@ function openTxModal(id, defaultType) {
     if (!t) return;
     setTxType(t.type);
     document.getElementById('t-date').value = t.date;
-    document.getElementById('t-payment').value = t.payment || '계좌이체';
+    const pm = t.payment || '계좌이체';
+    document.querySelectorAll('.payment-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.trim() === pm);
+    });
+    document.getElementById('t-payment').value = pm;
     document.getElementById('t-memo').value = t.memo || '';
     document.getElementById('t-fixed').checked = t.is_fixed || false;
     const amtEl = document.getElementById('t-amount');
@@ -1916,7 +1910,8 @@ function openTxModal(id, defaultType) {
     else if (t.category) selectCategory(t.category, '#94a3b8', null);
   } else {
     setTxType(defaultType);
-    document.getElementById('t-date').value = new Date().toISOString().slice(0,10);
+    initDatePicker(new Date().toISOString().slice(0,10));
+    document.querySelectorAll('.payment-btn').forEach((b,i) => b.classList.toggle('active', i===0));
     document.getElementById('t-payment').value = '계좌이체';
     document.getElementById('t-memo').value = '';
     document.getElementById('t-fixed').checked = false;
@@ -1941,7 +1936,7 @@ async function saveTx() {
   if (!amount) { showToast('금액을 입력해주세요'); return; }
   const getVal = id => document.getElementById(id)?.value || '';
   const data = {
-    date: getVal('t-date'),
+    date: document.getElementById('t-date').value,
     type: getVal('t-type'),
     category: document.getElementById('t-category')?.value || getVal('t-cat-input') || '기타',
     payment: getVal('t-payment'),
@@ -2067,7 +2062,9 @@ async function handleRefresh() {
   if (st) st.textContent = `마지막 업데이트: ${new Date().toLocaleTimeString('ko-KR')}`;
 }
 
-const _mb = document.getElementById('modal-bg'); if(_mb) _mb.addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+document.getElementById('modal-bg').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
 
 // 숫자 입력 필드: 숫자와 소수점만 허용, 앞자리 0 제거
 document.querySelectorAll('.num-input').forEach(input => {
