@@ -1287,7 +1287,7 @@ let categories = []; // DB에서 로드된 카테고리
 let activeCatFilters = new Set();
 let currentTxView = 'list';
 
-const CAT_COLORS = {
+const BUDGET_CAT_COLORS = {
   '생활비':'#94a3b8','고정지출':'#38bdf8','저축':'#4ade80','투자':'#fbbf24',
   '배달-점심':'#fb923c','배달-저녁':'#f97316','외식':'#f59e0b','커피/간식':'#a78bfa',
   '미용/쇼핑':'#f472b6','오락':'#c084fc','술약속':'#818cf8',
@@ -1357,8 +1357,8 @@ async function loadCategories() {
     const r = await fetch(`${PROXY_BASE_URL}/api/categories`);
     categories = await r.json();
     if (!Array.isArray(categories)) categories = [];
-    // BUDGET_CAT_COLORS 동적 업데이트
-    categories.forEach(cat => { BUDGET_CAT_COLORS[cat.name] = cat.color; });
+    // BUDGET_BUDGET_CAT_COLORS 동적 업데이트
+    categories.forEach(cat => { BUDGET_BUDGET_CAT_COLORS[cat.name] = cat.color; });
   } catch(e) { categories = []; }
 }
 
@@ -1444,7 +1444,7 @@ async function createAndSelectCategory(name) {
     const data = await r.json();
     const newCat = Array.isArray(data) ? data[0] : data;
     categories.push(newCat);
-    BUDGET_CAT_COLORS[name] = color;
+    BUDGET_BUDGET_CAT_COLORS[name] = color;
     selectCategory(name, color, newCat.id);
   } catch(e) { selectCategory(name, color, null); }
 }
@@ -1677,14 +1677,14 @@ function renderBudget() {
     let off=0, paths='';
     const sorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
     sorted.forEach(([cat,amt])=>{
-      const color=CAT_COLORS[cat]||'#6b7280', pct=amt/expTotal, dash=pct*circ, gap=circ-dash;
+      const color=BUDGET_CAT_COLORS[cat]||'#6b7280', pct=amt/expTotal, dash=pct*circ, gap=circ-dash;
       paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;
       off+=dash;
     });
     donut.innerHTML=paths+`<text x="${cx}" y="${cy-6}" text-anchor="middle" fill="#8b8f9a" font-size="10" font-family="Pretendard,sans-serif">지출</text><text x="${cx}" y="${cy+10}" text-anchor="middle" fill="#f0f1f3" font-size="12" font-weight="600" font-family="Pretendard,sans-serif">${W(expTotal)}</text>`;
     if (legend) legend.innerHTML=sorted.map(([cat,amt])=>{
       const pct=(amt/expTotal*100).toFixed(1);
-      return `<div class="legend-item"><div class="leg-left"><div class="leg-dot" style="background:${CAT_COLORS[cat]||'#6b7280'}"></div>${cat}</div><div class="leg-right"><span class="leg-pct">${pct}%</span><span class="leg-val">${W(amt)}</span></div></div>`;
+      return `<div class="legend-item"><div class="leg-left"><div class="leg-dot" style="background:${BUDGET_CAT_COLORS[cat]||'#6b7280'}"></div>${cat}</div><div class="leg-right"><span class="leg-pct">${pct}%</span><span class="leg-val">${W(amt)}</span></div></div>`;
     }).join('');
   } else if (donut) {
     donut.innerHTML='<text x="75" y="80" text-anchor="middle" fill="#555a66" font-size="12" font-family="Pretendard,sans-serif">데이터 없음</text>';
@@ -1720,7 +1720,7 @@ function renderCatFilters(byCat) {
   container.innerHTML = cats.map(cat => {
     const active = activeCatFilters.has(cat);
     return `<span onclick="toggleCatFilter('${cat}')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent-dim)':'transparent'};color:${active?'var(--accent)':'var(--text-muted)'};transition:all 0.15s;">
-      <span style="width:6px;height:6px;border-radius:50%;background:${CAT_COLORS[cat]||'#6b7280'};"></span>${cat}
+      <span style="width:6px;height:6px;border-radius:50%;background:${BUDGET_CAT_COLORS[cat]||'#6b7280'};"></span>${cat}
     </span>`;
   }).join('');
 }
@@ -1758,7 +1758,7 @@ function renderTxList() {
       </div>
       ${txs.map(t=>`<div class="asset-row">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-          <div style="width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
+          <div style="width:8px;height:8px;border-radius:50%;background:${BUDGET_CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
           <div style="min-width:0;"><div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.memo||t.category}</div>
           <div style="font-size:11px;color:var(--text-muted);">${t.category}${t.payment?' · '+t.payment:''}</div></div>
         </div>
@@ -1842,7 +1842,7 @@ function showDayDetail(dateStr) {
   if (detailTitle) detailTitle.textContent = dateStr + ' — 지출 ' + W(total);
   detailList.innerHTML = txs.map(t=>`<div class="asset-row">
     <div style="display:flex;align-items:center;gap:8px;flex:1;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:${BUDGET_CAT_COLORS[t.category]||'#6b7280'};flex-shrink:0;"></div>
       <div><div style="font-size:13px;">${t.memo||t.category}</div>
       <div style="font-size:11px;color:var(--text-muted);">${t.category}</div></div>
     </div>
