@@ -2612,19 +2612,19 @@ function toggleDiaGroup(key, groupAssets, dateStr) {
     if (allSelected) homeSelectedDia.delete(a.id);
     else homeSelectedDia.add(a.id);
   });
-  renderHomeAssets();
+  updateHomeTotal();
 }
 
 function toggleDiaAsset(id) {
   if (homeSelectedDia.has(id)) homeSelectedDia.delete(id);
   else homeSelectedDia.add(id);
-  renderHomeAssets();
+  updateHomeTotal();
 }
 
 function toggleSjAsset(id) {
   if (homeSelectedSj.has(id)) homeSelectedSj.delete(id);
   else homeSelectedSj.add(id);
-  renderHomeAssets();
+  updateHomeTotal();
 }
 
 function updateHomeTotal() {
