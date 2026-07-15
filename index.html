@@ -397,7 +397,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
   <!-- 가계부 -->
   <div class="page" id="page-budget" style="padding:0;max-width:100%;width:100%;">
-    <div style="display:grid;grid-template-columns:220px 1fr;height:100vh;overflow:hidden;max-width:100%;">
+    <div style="display:grid;grid-template-columns:220px 1fr;height:100vh;overflow:hidden;">
 
       <!-- 좌측 월별 패널 -->
       <div style="background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
@@ -421,7 +421,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
         </div>
 
         <!-- 컨텐츠 -->
-        <div style="flex:1;overflow-y:auto;padding:24px 32px;" id="budget-content">
+        <div style="flex:1;overflow-y:auto;padding:20px 24px;" id="budget-content">
 
           <!-- 대시보드 탭 -->
           <div id="budget-tab-overview">
@@ -510,7 +510,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 
   <!-- 내집마련 -->
-  <div class="page" id="page-home" style="max-width:100%;">
+  <div class="page" id="page-home">
     <div class="page-header">
       <h1>🏠 내집마련 시뮬레이터</h1>
       <p>날짜 기준으로 우리 둘의 자산을 확인하고 집 매매 계획을 세워요</p>
@@ -1576,18 +1576,10 @@ function renderMonthList() {
       const cyVar = cyTxs.filter(t=>t.type==='지출').reduce((s,t)=>s+t.amount,0);
       if (cyTxs.length > 0) remain = cyIncome - cyFixed - cyVar;
     } catch(e) {}
-    const borderColor = isActive ? 'var(--accent)' : 'transparent';
-    const bgColor = isActive ? 'var(--accent-dim)' : 'transparent';
-    const textWeight = isActive ? '600' : '400';
-    const textColor = isActive ? 'var(--accent)' : 'var(--text-sub)';
-    const remainColor = remain===null ? 'var(--text-muted)' : remain>=0 ? 'var(--accent)' : 'var(--red)';
-    const remainText = remain===null ? '기록 없음' : remain>=0 ? '남은돈 '+W(remain) : '초과 '+W(Math.abs(remain));
-    const div = document.createElement('div');
-    div.style.cssText = 'padding:11px 14px;cursor:pointer;border-left:2px solid '+borderColor+';background:'+bgColor+';transition:all 0.15s;';
-    div.onclick = () => selectBudgetMonth(cycle.value);
-    div.innerHTML = '<div style="font-size:13px;font-weight:'+textWeight+';color:'+textColor+';">'+cycle.label+'</div>' +
-      '<div style="font-size:11px;margin-top:2px;color:'+remainColor+';">'+remainText+'</div>';
-    return div.outerHTML;
+    return '<div onclick="selectBudgetMonth('' + cycle.value + '')" style="padding:11px 14px;cursor:pointer;border-left:2px solid ' + (isActive?'var(--accent)':'transparent') + ';background:' + (isActive?'var(--accent-dim)':'transparent') + ';transition:all 0.15s;">' +
+      '<div style="font-size:13px;font-weight:' + (isActive?'600':'400') + ';color:' + (isActive?'var(--accent)':'var(--text-sub)') + ';">' + cycle.label + '</div>' +
+      '<div style="font-size:11px;margin-top:2px;color:' + (remain===null?'var(--text-muted)':remain>=0?'var(--accent)':'var(--red)') + ';">' +
+      (remain===null ? '기록 없음' : remain>=0 ? '남은돈 '+W(remain) : '초과 '+W(Math.abs(remain))) + '</div></div>';
   }).join('');
 }
 
@@ -1684,28 +1676,16 @@ function applyFilters() {
 function renderCatFilterChips(byCat) {
   const container = document.getElementById('b-cat-filters');
   if (!container) return;
-  container.innerHTML = '';
   const cats = Object.keys(byCat).sort();
   const allActive = activeCatFilters.size === 0;
-
-  const allSpan = document.createElement('span');
-  allSpan.onclick = clearCatFilters;
-  allSpan.style.cssText = 'display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid '+(allActive?'var(--accent)':'var(--border)')+';background:'+(allActive?'var(--accent-dim)':'transparent')+';color:'+(allActive?'var(--accent)':'var(--text-muted)')+';font-weight:'+(allActive?'600':'400')+';';
-  allSpan.textContent = '전체';
-  container.appendChild(allSpan);
-
+  let html = '<span onclick="clearCatFilters()" style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid ' + (allActive?'var(--accent)':'var(--border)') + ';background:' + (allActive?'var(--accent-dim)':'transparent') + ';color:' + (allActive?'var(--accent)':'var(--text-muted)') + ';font-weight:' + (allActive?'600':'400') + ';">전체</span>';
   cats.forEach(cat => {
     const active = activeCatFilters.has(cat);
     const color = BUDGET_CAT_COLORS[cat] || '#6b7280';
-    const span = document.createElement('span');
-    span.onclick = () => toggleCatFilter(cat);
-    span.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid '+(active?color:'var(--border)')+';background:'+(active?color+'22':'transparent')+';color:'+(active?color:'var(--text-muted)')+';';
-    const dot = document.createElement('span');
-    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:'+color+';flex-shrink:0;';
-    span.appendChild(dot);
-    span.appendChild(document.createTextNode(cat));
-    container.appendChild(span);
+    html += '<span onclick="toggleCatFilter('' + cat + '')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid ' + (active?color:'var(--border)') + ';background:' + (active?color+'22':'transparent') + ';color:' + (active?color:'var(--text-muted)') + ';">' +
+      '<span style="width:6px;height:6px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>' + cat + '</span>';
   });
+  container.innerHTML = html;
 }
 
 function toggleCatFilter(cat) {
@@ -1765,8 +1745,7 @@ function renderCalendar(filtered) {
   filtered.filter(t=>t.type==='수입').forEach(t=>{ byDateInc[t.date]=(byDateInc[t.date]||0)+t.amount; });
 
   const days = ['일','월','화','수','목','금','토'];
-  cal.innerHTML = '';
-
+  let html = '';
   let curM = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
   while (curM <= endDate) {
     const y = curM.getFullYear(), m = curM.getMonth();
@@ -1774,29 +1753,10 @@ function renderCalendar(filtered) {
     const isFirst = y===startDate.getFullYear() && m===startDate.getMonth();
     const dayStart = isFirst ? startDate.getDate() : 1;
     const startDOW = new Date(y, m, dayStart).getDay();
-
-    const section = document.createElement('div');
-    section.style.marginBottom = '18px';
-
-    const label = document.createElement('div');
-    label.style.cssText = 'font-size:12px;font-weight:500;color:var(--text-sub);margin-bottom:8px;';
-    label.textContent = y + '년 ' + (m+1) + '월';
-    section.appendChild(label);
-
-    const grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;';
-
-    days.forEach(d => {
-      const hdr = document.createElement('div');
-      hdr.style.cssText = 'font-size:10px;color:var(--text-muted);padding:3px 0;';
-      hdr.textContent = d;
-      grid.appendChild(hdr);
-    });
-
-    for (let i=0; i<startDOW; i++) {
-      grid.appendChild(document.createElement('div'));
-    }
-
+    html += '<div style="margin-bottom:18px;"><div style="font-size:12px;font-weight:500;color:var(--text-sub);margin-bottom:8px;">' + y + '년 ' + (m+1) + '월</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">';
+    days.forEach(d => { html += '<div style="font-size:10px;color:var(--text-muted);padding:3px 0;">' + d + '</div>'; });
+    for (let i=0;i<startDOW;i++) html += '<div></div>';
     for (let d=dayStart; d<=daysInMonth; d++) {
       const ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
       const inRange = ds >= start && ds <= end;
@@ -1804,38 +1764,16 @@ function renderCalendar(filtered) {
       const hasData = inRange && (exp>0||inc>0);
       const isFiltered = activeCatFilters.size>0 || currentTypeFilter || (document.getElementById('b-search-input')?.value?.trim());
       const dimmed = inRange && isFiltered && !hasData;
-
-      const cell = document.createElement('div');
-      cell.style.cssText = 'padding:3px 1px;border-radius:5px;cursor:'+(hasData?'pointer':'default')+
-        ';background:'+(!inRange?'transparent':hasData?'var(--surface3)':'var(--surface2)')+
-        ';border:1px solid '+(!inRange?'transparent':hasData?'var(--border2)':'var(--border)')+
-        ';opacity:'+(!inRange?0.2:dimmed?0.25:1)+
-        ';min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;';
-      if (hasData) cell.onclick = (function(date){ return function(){ showDayDetail(date); }; })(ds);
-
-      const dayNum = document.createElement('div');
-      dayNum.style.cssText = 'font-size:11px;color:'+(inRange&&!dimmed?'var(--text)':'var(--text-muted)')+';';
-      dayNum.textContent = d;
-      cell.appendChild(dayNum);
-
-      if (inRange && inc > 0) {
-        const incDiv = document.createElement('div');
-        incDiv.style.cssText = 'font-size:9px;color:var(--accent);font-weight:600;';
-        incDiv.textContent = '+' + (inc/10000).toFixed(0) + '만';
-        cell.appendChild(incDiv);
-      }
-      if (inRange && exp > 0) {
-        const expDiv = document.createElement('div');
-        expDiv.style.cssText = 'font-size:9px;color:var(--red);';
-        expDiv.textContent = '-' + (exp/10000).toFixed(0) + '만';
-        cell.appendChild(expDiv);
-      }
-      grid.appendChild(cell);
+      html += '<div onclick="' + (hasData?'showDayDetail(''+ds+'')':'') + '" style="padding:3px 1px;border-radius:5px;cursor:' + (hasData?'pointer':'default') + ';background:' + (!inRange?'transparent':hasData?'var(--surface3)':'var(--surface2)') + ';border:1px solid ' + (!inRange?'transparent':hasData?'var(--border2)':'var(--border)') + ';opacity:' + (!inRange?0.2:dimmed?0.25:1) + ';min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">' +
+        '<div style="font-size:11px;color:' + (inRange&&!dimmed?'var(--text)':'var(--text-muted)') + ';">' + d + '</div>' +
+        (inRange&&inc>0?'<div style="font-size:9px;color:var(--accent);font-weight:600;">+' + (inc/10000).toFixed(0) + '만</div>':'') +
+        (inRange&&exp>0?'<div style="font-size:9px;color:var(--red);">-' + (exp/10000).toFixed(0) + '만</div>':'') +
+        '</div>';
     }
-    section.appendChild(grid);
-    cal.appendChild(section);
+    html += '</div></div>';
     curM = new Date(y, m+1, 1);
   }
+  cal.innerHTML = html;
 }
 
 function showDayDetail(dateStr) {
@@ -1936,41 +1874,21 @@ function renderFixedList() {
   const el = document.getElementById('b-fixed-total'); if(el) el.textContent = '월 ' + W(total);
   const byGroup = {};
   fixedExpenses.forEach(f=>{ if(!byGroup[f.category]) byGroup[f.category]=[]; byGroup[f.category].push(f); });
-  list.innerHTML = '';
-  Object.entries(byGroup).forEach(([cat,items]) => {
+  list.innerHTML = Object.entries(byGroup).map(([cat,items])=>{
     const catTotal = items.reduce((s,f)=>s+f.amount,0);
-    const section = document.createElement('div');
-    section.className = 'cat-section open';
-    const header = document.createElement('div');
-    header.className = 'cat-row';
-    header.onclick = () => section.classList.toggle('open');
-    header.innerHTML = '<div class="cat-tag"><div class="cat-dot" style="background:var(--blue)"></div>' + cat + '</div>' +
-      '<div class="cat-meta"><span class="cat-total">' + W(catTotal) + '</span><span class="chevron">▼</span></div>';
-    const itemsDiv = document.createElement('div');
-    itemsDiv.className = 'asset-items';
-    items.forEach(f => {
-      const row = document.createElement('div');
-      row.className = 'asset-row';
-      row.innerHTML = '<div style="flex:1;font-size:13px;color:var(--text-sub);">' + f.name + '</div>' +
+    return '<div class="cat-section open">' +
+      '<div class="cat-row" onclick="this.parentElement.classList.toggle('open')">' +
+      '<div class="cat-tag"><div class="cat-dot" style="background:var(--blue)"></div>' + cat + '</div>' +
+      '<div class="cat-meta"><span class="cat-total">' + W(catTotal) + '</span><span class="chevron">▼</span></div></div>' +
+      '<div class="asset-items">' +
+      items.map(f=>'<div class="asset-row">' +
+        '<div style="flex:1;font-size:13px;color:var(--text-sub);">' + f.name + '</div>' +
         '<div style="font-size:13px;font-weight:500;">' + W(f.amount) + '</div>' +
-        '<div class="asset-actions"></div>';
-      const actions = row.querySelector('.asset-actions');
-      const editBtn = document.createElement('button');
-      editBtn.className = 'btn-icon';
-      editBtn.textContent = '수정';
-      editBtn.onclick = () => openFixedModal(f.id);
-      const delBtn = document.createElement('button');
-      delBtn.className = 'btn-icon del';
-      delBtn.textContent = '삭제';
-      delBtn.onclick = () => deleteFixed(f.id);
-      actions.appendChild(editBtn);
-      actions.appendChild(delBtn);
-      itemsDiv.appendChild(row);
-    });
-    section.appendChild(header);
-    section.appendChild(itemsDiv);
-    list.appendChild(section);
-  });
+        '<div class="asset-actions">' +
+        '<button class="btn-icon" onclick="openFixedModal(' + f.id + ')">수정</button>' +
+        '<button class="btn-icon del" onclick="deleteFixed(' + f.id + ')">삭제</button></div></div>'
+      ).join('') + '</div></div>';
+  }).join('');
 }
 
 // ── 날짜 피커 ────────────────────────────────────────────────────
@@ -2005,23 +1923,17 @@ function changePickerMonth(dir) {
   renderPickerDays();
 }
 function renderPickerDays() {
-  const container = document.getElementById('picker-days');
-  if (!container) return;
-  const today = new Date().toISOString().slice(0,10);
-  const sel = document.getElementById('t-date')?.value || '';
-  const dim = new Date(pickerYear, pickerMonth+1, 0).getDate();
-  const fd = new Date(pickerYear, pickerMonth, 1).getDay();
-  container.innerHTML = '';
-  for (let i=0; i<fd; i++) container.appendChild(document.createElement('div'));
-  for (let d=1; d<=dim; d++) {
-    const ds = pickerYear+'-'+String(pickerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const isSel=ds===sel, isToday=ds===today;
-    const cell = document.createElement('div');
-    cell.style.cssText = 'padding:5px 1px;border-radius:5px;cursor:pointer;font-size:12px;text-align:center;background:'+(isSel?'var(--accent)':isToday?'var(--accent-dim)':'transparent')+';color:'+(isSel?'#0e0f11':isToday?'var(--accent)':'var(--text)')+';font-weight:'+(isSel||isToday?'600':'400')+';';
-    cell.onclick = (function(date){ return function(){ pickDate(date); }; })(ds);
-    cell.textContent = d;
-    container.appendChild(cell);
+  const container=document.getElementById('picker-days'); if(!container) return;
+  const today=new Date().toISOString().slice(0,10), sel=document.getElementById('t-date')?.value||'';
+  const dim=new Date(pickerYear,pickerMonth+1,0).getDate(), fd=new Date(pickerYear,pickerMonth,1).getDay();
+  let html='';
+  for(let i=0;i<fd;i++) html+='<div></div>';
+  for(let d=1;d<=dim;d++){
+    const ds=pickerYear+'-'+String(pickerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isSel=ds===sel,isToday=ds===today;
+    html+='<div onclick="pickDate(''+ds+'')" style="padding:5px 1px;border-radius:5px;cursor:pointer;font-size:12px;text-align:center;background:'+(isSel?'var(--accent)':isToday?'var(--accent-dim)':'transparent')+';color:'+(isSel?'#0e0f11':isToday?'var(--accent)':'var(--text)')+';font-weight:'+(isSel||isToday?'600':'400')+';">'+d+'</div>';
   }
+  container.innerHTML=html;
 }
 function pickDate(ds){updateDateDisplay(ds);const p=document.getElementById('t-date-picker');if(p)p.style.display='none';renderPickerDays();}
 function selectToday(){pickDate(new Date().toISOString().slice(0,10));}
@@ -2040,46 +1952,22 @@ function filterCatDropdown(query) {
   renderCatDropdown(cats, query);
 }
 function renderCatDropdown(cats, query) {
-  const dd = document.getElementById('t-cat-dropdown');
-  if (!dd) return;
-  if (cats.length === 0 && !query) { dd.style.display = 'none'; return; }
+  const dd = document.getElementById('t-cat-dropdown'); if(!dd) return;
+  if (cats.length===0 && !query) { dd.style.display='none'; return; }
   dd.style.display = 'block';
-  dd.innerHTML = '';
-
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'padding:8px;display:flex;flex-wrap:wrap;gap:5px;';
-
-  cats.forEach(cat => {
-    const outer = document.createElement('div');
-    outer.style.cssText = 'display:flex;align-items:center;border-radius:18px;overflow:hidden;border:1px solid '+cat.color+'33;background:'+cat.color+'15;';
-    const nameSpan = document.createElement('span');
-    nameSpan.onclick = () => selectCategory(cat.name, cat.color, cat.id);
-    nameSpan.style.cssText = 'display:flex;align-items:center;gap:5px;padding:4px 8px;cursor:pointer;font-size:12px;color:'+cat.color+';';
-    const dot = document.createElement('span');
-    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:'+cat.color+';flex-shrink:0;';
-    nameSpan.appendChild(dot);
-    nameSpan.appendChild(document.createTextNode(cat.name));
-    const menuBtn = document.createElement('span');
-    menuBtn.onclick = (e) => { e.stopPropagation(); openCatMenu(e, cat.id, cat.name, cat.color); };
-    menuBtn.style.cssText = 'padding:4px 7px 4px 2px;cursor:pointer;color:'+cat.color+';opacity:0.5;font-size:11px;';
-    menuBtn.onmouseenter = () => menuBtn.style.opacity = '1';
-    menuBtn.onmouseleave = () => menuBtn.style.opacity = '0.5';
-    menuBtn.textContent = '•••';
-    outer.appendChild(nameSpan);
-    outer.appendChild(menuBtn);
-    wrap.appendChild(outer);
-  });
-  dd.appendChild(wrap);
-
-  if (query && !cats.find(cat => cat.name === query)) {
-    const addDiv = document.createElement('div');
-    addDiv.onclick = () => createCat(query);
-    addDiv.style.cssText = 'padding:7px 12px;cursor:pointer;color:var(--accent);font-size:12px;border-top:1px solid var(--border);';
-    addDiv.onmouseenter = () => addDiv.style.background = 'var(--surface2)';
-    addDiv.onmouseleave = () => addDiv.style.background = '';
-    addDiv.innerHTML = '+ "<strong>' + query + '</strong>" 새 카테고리로 추가';
-    dd.appendChild(addDiv);
+  let html = '<div style="padding:8px;display:flex;flex-wrap:wrap;gap:5px;">';
+  html += cats.map(cat =>
+    '<div style="display:flex;align-items:center;border-radius:18px;overflow:hidden;border:1px solid '+cat.color+'33;background:'+cat.color+'15;">' +
+    '<span onclick="selectCategory(''+cat.name+'',''+cat.color+'','+cat.id+')" style="display:flex;align-items:center;gap:5px;padding:4px 8px;cursor:pointer;font-size:12px;color:'+cat.color+';">' +
+    '<span style="width:6px;height:6px;border-radius:50%;background:'+cat.color+';flex-shrink:0;"></span>'+cat.name+'</span>' +
+    '<span onclick="event.stopPropagation();openCatMenu(event,'+cat.id+',''+cat.name+'',''+cat.color+'')" style="padding:4px 7px 4px 2px;cursor:pointer;color:'+cat.color+';opacity:0.5;font-size:11px;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.5">•••</span>' +
+    '</div>'
+  ).join('');
+  html += '</div>';
+  if (query && !cats.find(c=>c.name===query)) {
+    html += '<div onclick="createCat(''+query+'')" style="padding:7px 12px;cursor:pointer;color:var(--accent);font-size:12px;border-top:1px solid var(--border);" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">+ "'+query+'" 새 카테고리로 추가</div>';
   }
+  dd.innerHTML = html;
 }
 function selectCategory(name, color, id) {
   document.getElementById('t-category').value = name;
@@ -2112,52 +2000,31 @@ async function createCat(name) {
 }
 function openCatMenu(event, id, name, color) {
   document.getElementById('cat-ctx-menu')?.remove();
-  const menu = document.createElement('div');
-  menu.id = 'cat-ctx-menu';
-  menu.style.cssText = 'position:fixed;z-index:400;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:150px;';
-  menu.style.left = event.clientX + 'px';
-  menu.style.top = event.clientY + 'px';
-
-  const header = document.createElement('div');
-  header.style.cssText = 'padding:5px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);';
-  header.textContent = name;
-  menu.appendChild(header);
-
-  const items = [
-    { label: '✏️ 이름 변경', fn: () => renameCat(id, name), color: null },
-    { label: '🎨 색상 변경', fn: () => changeCatColor(id, color), color: null },
-    { label: '🗑️ 삭제', fn: () => deleteCatItem(id, name), color: 'var(--red)' },
-  ];
-  items.forEach(item => {
-    const div = document.createElement('div');
-    div.style.cssText = 'padding:7px 10px;cursor:pointer;font-size:12px;border-radius:6px;' + (item.color ? 'color:'+item.color+';' : '');
-    div.onmouseenter = () => div.style.background = item.color ? 'var(--red-dim)' : 'var(--surface2)';
-    div.onmouseleave = () => div.style.background = '';
-    div.onclick = () => { item.fn(); menu.remove(); };
-    div.textContent = item.label;
-    menu.appendChild(div);
-  });
-
+  const menu=document.createElement('div');
+  menu.id='cat-ctx-menu';
+  menu.style.cssText='position:fixed;z-index:400;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:150px;';
+  menu.style.left=event.clientX+'px'; menu.style.top=event.clientY+'px';
+  menu.innerHTML=
+    '<div style="padding:5px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);">'+name+'</div>'+
+    '<div onclick="renameCat('+id+',''+name+'')" style="padding:7px 10px;cursor:pointer;font-size:12px;border-radius:6px;" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">✏️ 이름 변경</div>'+
+    '<div onclick="changeCatColor('+id+',''+color+'')" style="padding:7px 10px;cursor:pointer;font-size:12px;border-radius:6px;" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🎨 색상 변경</div>'+
+    '<div onclick="deleteCatItem('+id+',''+name+'')" style="padding:7px 10px;cursor:pointer;font-size:12px;color:var(--red);border-radius:6px;" onmouseenter="this.style.background='var(--red-dim)'" onmouseleave="this.style.background=''">🗑️ 삭제</div>';
   document.body.appendChild(menu);
-  setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 50);
+  setTimeout(()=>document.addEventListener('click',()=>menu.remove(),{once:true}),50);
 }
 async function renameCat(id,oldName){
   const n=prompt('새 이름:',oldName); if(!n||n===oldName) return;
   await fetch(PROXY_BASE_URL+'/api/categories',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name:n})});
   await loadCategories(); document.getElementById('cat-ctx-menu')?.remove();
 }
-async function changeCatColor(id, cur) {
-  const cols = ['#fb923c','#f97316','#f59e0b','#4ade80','#22d3ee','#38bdf8','#a78bfa','#c084fc','#818cf8','#f472b6','#fb7185','#f43f5e','#e879f9','#fbbf24','#6b7280','#94a3b8'];
-  const picker = document.createElement('div');
-  picker.style.cssText = 'position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:grid;grid-template-columns:repeat(8,1fr);gap:5px;left:50%;top:50%;transform:translate(-50%,-50%);';
-  cols.forEach(col => {
-    const dot = document.createElement('div');
-    dot.style.cssText = 'width:26px;height:26px;border-radius:50%;background:'+col+';cursor:pointer;border:3px solid '+(col===cur?'white':'transparent')+';';
-    dot.onclick = () => { picker.remove(); applyColor(id, col); };
-    picker.appendChild(dot);
-  });
+async function changeCatColor(id,cur){
+  const cols=['#fb923c','#f97316','#f59e0b','#4ade80','#22d3ee','#38bdf8','#a78bfa','#c084fc','#818cf8','#f472b6','#fb7185','#f43f5e','#e879f9','#fbbf24','#6b7280','#94a3b8'];
+  const picker=document.createElement('div');
+  picker.style.cssText='position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:grid;grid-template-columns:repeat(8,1fr);gap:5px;';
+  picker.style.left='50%'; picker.style.top='50%'; picker.style.transform='translate(-50%,-50%)';
+  picker.innerHTML=cols.map(col=>'<div onclick="applyColor('+id+',''+col+'')" style="width:26px;height:26px;border-radius:50%;background:'+col+';cursor:pointer;border:3px solid '+(col===cur?'white':'transparent')+';"></div>').join('');
   document.body.appendChild(picker);
-  setTimeout(() => document.addEventListener('click', () => picker.remove(), { once: true }), 50);
+  setTimeout(()=>document.addEventListener('click',()=>picker.remove(),{once:true}),50);
 }
 async function applyColor(id,color){
   document.querySelectorAll('[style*="position:fixed"][style*="z-index:500"]').forEach(e=>e.remove());
@@ -2411,83 +2278,163 @@ function getDiaEarlyAmount(asset) {
 function renderHomeAssets() {
   const dateStr = document.getElementById('home-date').value;
   if (!dateStr) return;
-
   const target = new Date(dateStr + '-01');
   const now = new Date();
-  const monthDiff = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
-  const label = monthDiff === 0 ? '현재 기준' : monthDiff > 0 ? monthDiff + '개월 후 기준' : Math.abs(monthDiff) + '개월 전 기준';
+  const monthDiff = (target.getFullYear()-now.getFullYear())*12+(target.getMonth()-now.getMonth());
+  const label = monthDiff===0?'현재 기준':monthDiff>0?monthDiff+'개월 후 기준':Math.abs(monthDiff)+'개월 전 기준';
   document.getElementById('home-date-label').textContent = label;
 
-  // 규원 자산 렌더
+  // 규원 자산 그룹화
+  const DIA_GROUPS = [
+    { key:'현금', label:'💵 현금', icon:'💵', types:['현금'] },
+    { key:'국내주식', label:'📈 국내주식', icon:'📈', types:['국내주식'] },
+    { key:'해외주식', label:'🌍 해외주식', icon:'🌍', types:['해외주식'] },
+    { key:'전세', label:'🏠 전세보증금', icon:'🏠', types:['전세'] },
+    { key:'적금', label:'💰 적금', icon:'💰', types:['적금'] },
+    { key:'퇴직연금', label:'🏢 퇴직연금', icon:'🏢', types:['퇴직연금'] },
+    { key:'기타', label:'📦 기타', icon:'📦', types:['기타'] },
+  ];
+
   const diaList = document.getElementById('dia-asset-list');
-  const diaOrder = ['현금','국내주식','해외주식','전세','적금','퇴직연금','기타'];
-  const sortedDia = [...diaAssets].sort((a,b) => diaOrder.indexOf(a.type) - diaOrder.indexOf(b.type));
-  
-  diaList.innerHTML = sortedDia.map(asset => {
-    const liquidity = getDiaLiquidity(asset, dateStr);
-    const earlyAmt = getDiaEarlyAmount(asset);
-    const isPenalty = earlyAmt !== null && liquidity === '비유동';
-    const isImpossible = liquidity === '불가';
-    const isSelected = homeSelectedDia.has(asset.id);
-    const displayAmt = isSelected && isPenalty ? earlyAmt : asset.amount;
-    
-    const liquidityColor = liquidity === '유동' ? 'var(--accent)' : liquidity === '비유동' ? 'var(--orange)' : 'var(--text-muted)';
-    const liquidityBg = liquidity === '유동' ? 'rgba(74,222,128,0.15)' : liquidity === '비유동' ? 'rgba(251,146,60,0.15)' : 'var(--surface3)';
+  diaList.innerHTML = '';
 
-    return `<div onclick="${isImpossible ? '' : `toggleDiaAsset(${asset.id})`}" style="
-      display:flex;align-items:center;gap:10px;padding:10px 16px;
-      cursor:${isImpossible?'not-allowed':'pointer'};
-      background:${isSelected?'var(--accent-dim)':'transparent'};
-      border-left:3px solid ${isSelected?'var(--accent)':'transparent'};
-      transition:all 0.15s;opacity:${isImpossible?0.4:1};">
-      <div style="width:18px;height:18px;border-radius:4px;border:2px solid ${isSelected?'var(--accent)':'var(--border2)'};background:${isSelected?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        ${isSelected?'<span style="color:#0e0f11;font-size:11px;font-weight:700;">✓</span>':''}
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${asset.name}</div>
-        ${isPenalty&&isSelected?`<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 시 ${W(earlyAmt)} (원금 ${W(asset.amount)})</div>`:''}
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:13px;font-weight:600;">${W(displayAmt)}</div>
-        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${liquidityBg};color:${liquidityColor};">${liquidity}</span>
-      </div>
-    </div>`;
-  }).join('');
+  DIA_GROUPS.forEach(group => {
+    const groupAssets = diaAssets.filter(a => group.types.includes(a.type));
+    if (groupAssets.length === 0) return;
 
-  // 성재 자산 렌더
+    const groupTotal = groupAssets.reduce((s,a) => {
+      const liq = getDiaLiquidity(a, dateStr);
+      const earlyAmt = getDiaEarlyAmount(a);
+      const selected = homeSelectedDia.has(a.id);
+      return s + (selected && earlyAmt && liq==='비유동' ? earlyAmt : a.amount);
+    }, 0);
+
+    const allSelected = groupAssets.every(a => homeSelectedDia.has(a.id));
+    const someSelected = groupAssets.some(a => homeSelectedDia.has(a.id));
+    const isImpossibleGroup = groupAssets.every(a => getDiaLiquidity(a, dateStr) === '불가');
+
+    // 그룹 헤더
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);cursor:'+(isImpossibleGroup?'not-allowed':'pointer')+';opacity:'+(isImpossibleGroup?0.4:1)+';';
+    header.onclick = isImpossibleGroup ? null : () => toggleDiaGroup(group.key, groupAssets, dateStr);
+
+    const checkbox = document.createElement('div');
+    checkbox.style.cssText = 'width:18px;height:18px;border-radius:4px;border:2px solid '+(allSelected?'var(--accent)':someSelected?'var(--orange)':'var(--border2)')+';background:'+(allSelected?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+    checkbox.innerHTML = allSelected ? '<span style="color:#0e0f11;font-size:11px;font-weight:700;">✓</span>' : someSelected ? '<span style="color:var(--orange);font-size:11px;">−</span>' : '';
+
+    const groupLabel = document.createElement('div');
+    groupLabel.style.cssText = 'flex:1;font-size:13px;font-weight:600;';
+    groupLabel.textContent = group.label + (groupAssets.length > 1 ? ' ('+groupAssets.length+'개)' : '');
+
+    const groupAmt = document.createElement('div');
+    groupAmt.style.cssText = 'font-size:13px;font-weight:600;color:'+(allSelected?'var(--accent)':'var(--text)')+';';
+    groupAmt.textContent = W(groupTotal);
+
+    const toggle = document.createElement('span');
+    toggle.style.cssText = 'font-size:11px;color:var(--text-muted);margin-left:4px;';
+    toggle.textContent = '▼';
+
+    header.appendChild(checkbox);
+    header.appendChild(groupLabel);
+    header.appendChild(groupAmt);
+    if (groupAssets.length > 1) header.appendChild(toggle);
+
+    // 개별 항목 (2개 이상일 때만)
+    const itemsDiv = document.createElement('div');
+    itemsDiv.style.display = 'block';
+
+    if (groupAssets.length > 1) {
+      header.onclick = isImpossibleGroup ? null : (e) => {
+        if (e.target === toggle || e.target === checkbox || e.target === checkbox.firstChild) {
+          toggleDiaGroup(group.key, groupAssets, dateStr);
+        } else {
+          itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
+          toggle.textContent = itemsDiv.style.display === 'none' ? '▶' : '▼';
+        }
+      };
+      checkbox.onclick = (e) => { e.stopPropagation(); toggleDiaGroup(group.key, groupAssets, dateStr); };
+    } else {
+      header.onclick = isImpossibleGroup ? null : () => toggleDiaGroup(group.key, groupAssets, dateStr);
+    }
+
+    groupAssets.forEach(asset => {
+      const liq = getDiaLiquidity(asset, dateStr);
+      const earlyAmt = getDiaEarlyAmount(asset);
+      const isPenalty = earlyAmt !== null && liq === '비유동';
+      const isImpossible = liq === '불가';
+      const isSelected = homeSelectedDia.has(asset.id);
+      const displayAmt = isSelected && isPenalty ? earlyAmt : asset.amount;
+      const liqColor = liq==='유동'?'var(--accent)':liq==='비유동'?'var(--orange)':'var(--text-muted)';
+      const liqBg = liq==='유동'?'rgba(74,222,128,0.15)':liq==='비유동'?'rgba(251,146,60,0.15)':'var(--surface3)';
+
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 16px 8px 36px;cursor:'+(isImpossible?'not-allowed':'pointer')+';background:'+(isSelected?'var(--accent-dim)':'transparent')+';border-left:3px solid '+(isSelected?'var(--accent)':'transparent')+';transition:all 0.15s;opacity:'+(isImpossible?0.4:1)+';';
+      if (!isImpossible) item.onclick = (e) => { e.stopPropagation(); toggleDiaAsset(asset.id); };
+
+      const cb = document.createElement('div');
+      cb.style.cssText = 'width:15px;height:15px;border-radius:3px;border:2px solid '+(isSelected?'var(--accent)':'var(--border2)')+';background:'+(isSelected?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+      cb.innerHTML = isSelected ? '<span style="color:#0e0f11;font-size:9px;font-weight:700;">✓</span>' : '';
+
+      const nameDiv = document.createElement('div');
+      nameDiv.style.cssText = 'flex:1;min-width:0;';
+      nameDiv.innerHTML = '<div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+asset.name+'</div>'+(isPenalty&&isSelected?'<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 '+W(earlyAmt)+' (원금 '+W(asset.amount)+')</div>':'');
+
+      const amtDiv = document.createElement('div');
+      amtDiv.style.cssText = 'text-align:right;flex-shrink:0;';
+      amtDiv.innerHTML = '<div style="font-size:12px;font-weight:600;">'+W(displayAmt)+'</div><span style="font-size:9px;padding:2px 5px;border-radius:8px;background:'+liqBg+';color:'+liqColor+';">'+liq+'</span>';
+
+      item.appendChild(cb); item.appendChild(nameDiv); item.appendChild(amtDiv);
+      itemsDiv.appendChild(item);
+    });
+
+    diaList.appendChild(header);
+    if (groupAssets.length > 1) diaList.appendChild(itemsDiv);
+
+  });
+
+  // 성재 자산 (그대로)
   const sjList = document.getElementById('sj-asset-list');
-  sjList.innerHTML = partnerAssets.map(asset => {
+  sjList.innerHTML = '';
+  partnerAssets.forEach(asset => {
     const { liquidity } = getAssetValueAtDate(asset, dateStr);
     const isPenalty = asset.early_penalty && liquidity === '비유동';
     const isImpossible = asset.liquidity === '불가';
     const isSelected = homeSelectedSj.has(asset.id);
     const displayAmt = isSelected && isPenalty ? asset.early_amount : asset.amount;
-    
-    const liquidityColor = liquidity === '유동' ? 'var(--accent)' : liquidity === '비유동' ? 'var(--orange)' : 'var(--text-muted)';
-    const liquidityBg = liquidity === '유동' ? 'rgba(74,222,128,0.15)' : liquidity === '비유동' ? 'rgba(251,146,60,0.15)' : 'var(--surface3)';
+    const liqColor = liquidity==='유동'?'var(--accent)':liquidity==='비유동'?'var(--orange)':'var(--text-muted)';
+    const liqBg = liquidity==='유동'?'rgba(74,222,128,0.15)':liquidity==='비유동'?'rgba(251,146,60,0.15)':'var(--surface3)';
 
-    return `<div onclick="${isImpossible ? '' : `toggleSjAsset(${asset.id})`}" style="
-      display:flex;align-items:center;gap:10px;padding:10px 16px;
-      cursor:${isImpossible?'not-allowed':'pointer'};
-      background:${isSelected?'var(--accent-dim)':'transparent'};
-      border-left:3px solid ${isSelected?'var(--accent)':'transparent'};
-      transition:all 0.15s;opacity:${isImpossible?0.4:1};">
-      <div style="width:18px;height:18px;border-radius:4px;border:2px solid ${isSelected?'var(--accent)':'var(--border2)'};background:${isSelected?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        ${isSelected?'<span style="color:#0e0f11;font-size:11px;font-weight:700;">✓</span>':''}
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;">${asset.name}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${asset.memo||''}</div>
-        ${isPenalty&&isSelected?`<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 시 ${W(asset.early_amount)}원 (원금 ${W(asset.amount)})</div>`:''}
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:13px;font-weight:600;">${W(displayAmt)}</div>
-        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${liquidityBg};color:${liquidityColor};">${liquidity}</span>
-      </div>
-    </div>`;
-  }).join('');
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:'+(isImpossible?'not-allowed':'pointer')+';background:'+(isSelected?'var(--accent-dim)':'transparent')+';border-left:3px solid '+(isSelected?'var(--accent)':'transparent')+';transition:all 0.15s;opacity:'+(isImpossible?0.4:1)+';';
+    if (!isImpossible) item.onclick = () => toggleSjAsset(asset.id);
+
+    const cb = document.createElement('div');
+    cb.style.cssText = 'width:18px;height:18px;border-radius:4px;border:2px solid '+(isSelected?'var(--accent)':'var(--border2)')+';background:'+(isSelected?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+    cb.innerHTML = isSelected ? '<span style="color:#0e0f11;font-size:11px;font-weight:700;">✓</span>' : '';
+
+    const nameDiv = document.createElement('div');
+    nameDiv.style.cssText = 'flex:1;min-width:0;';
+    nameDiv.innerHTML = '<div style="font-size:13px;">'+asset.name+'</div><div style="font-size:11px;color:var(--text-muted);">'+( asset.memo||'')+'</div>'+(isPenalty&&isSelected?'<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 '+W(asset.early_amount)+'원</div>':'');
+
+    const amtDiv = document.createElement('div');
+    amtDiv.style.cssText = 'text-align:right;flex-shrink:0;';
+    amtDiv.innerHTML = '<div style="font-size:13px;font-weight:600;">'+W(displayAmt)+'</div><span style="font-size:10px;padding:2px 6px;border-radius:10px;background:'+liqBg+';color:'+liqColor+';">'+liquidity+'</span>';
+
+    item.appendChild(cb); item.appendChild(nameDiv); item.appendChild(amtDiv);
+    sjList.appendChild(item);
+  });
 
   updateHomeTotal();
+}
+
+function toggleDiaGroup(key, groupAssets, dateStr) {
+  const nonImpossible = groupAssets.filter(a => getDiaLiquidity(a, dateStr) !== '불가');
+  const allSelected = nonImpossible.every(a => homeSelectedDia.has(a.id));
+  nonImpossible.forEach(a => {
+    if (allSelected) homeSelectedDia.delete(a.id);
+    else homeSelectedDia.add(a.id);
+  });
+  renderHomeAssets();
 }
 
 function toggleDiaAsset(id) {
