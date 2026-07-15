@@ -3055,8 +3055,8 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   if (PROXY_BASE_URL) fetchPrices();
 
   // 매매계획 고정지출 편집 모달
-  const pfModal = document.getElementById('plan-fixed-modal');
-  if (pfModal) pfModal.addEventListener('click', e => { if(e.target===pfModal) closePlanFixedEditor(); });
+  const _pfModal = document.getElementById('plan-fixed-modal');
+  if (_pfModal) _pfModal.addEventListener('click', e => { if(e.target===_pfModal) closePlanFixedEditor(); });
 
   // 가계부 버튼
   const _btnExp = document.getElementById('btn-add-expense');
@@ -3094,8 +3094,8 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   });
   
   // 매매계획 고정지출 편집 모달
-  const pfModal = document.getElementById('plan-fixed-modal');
-  if (pfModal) pfModal.addEventListener('click', e => { if(e.target===pfModal) closePlanFixedEditor(); });
+  const _pfModal = document.getElementById('plan-fixed-modal');
+  if (_pfModal) _pfModal.addEventListener('click', e => { if(e.target===_pfModal) closePlanFixedEditor(); });
 
   // 가계부 버튼 이벤트
   const btnExp = document.getElementById('btn-add-expense');
