@@ -1357,8 +1357,8 @@ async function loadCategories() {
     const r = await fetch(`${PROXY_BASE_URL}/api/categories`);
     categories = await r.json();
     if (!Array.isArray(categories)) categories = [];
-    // BUDGET_BUDGET_CAT_COLORS 동적 업데이트
-    categories.forEach(cat => { BUDGET_BUDGET_CAT_COLORS[cat.name] = cat.color; });
+    // BUDGET_CAT_COLORS 동적 업데이트
+    categories.forEach(cat => { BUDGET_CAT_COLORS[cat.name] = cat.color; });
   } catch(e) { categories = []; }
 }
 
@@ -1444,7 +1444,7 @@ async function createAndSelectCategory(name) {
     const data = await r.json();
     const newCat = Array.isArray(data) ? data[0] : data;
     categories.push(newCat);
-    BUDGET_BUDGET_CAT_COLORS[name] = color;
+    BUDGET_CAT_COLORS[name] = color;
     selectCategory(name, color, newCat.id);
   } catch(e) { selectCategory(name, color, null); }
 }
@@ -1725,15 +1725,39 @@ function renderCatFilters(byCat) {
   }).join('');
 }
 
+function applyFilters() {
+  const filtered = getFilteredTx();
+  const sumEl = document.getElementById('b-filter-summary');
+  if (sumEl) {
+    const totalExp = filtered.filter(t=>t.type==='지출').reduce((s,t)=>s+t.amount,0);
+    const totalInc = filtered.filter(t=>t.type==='수입').reduce((s,t)=>s+t.amount,0);
+    const filterType = document.getElementById('b-filter-type-sel')?.value||'';
+    const search = document.getElementById('b-search-input')?.value?.trim()||'';
+    const isFiltered = activeCatFilters.size>0 || filterType || search;
+    if (isFiltered && filtered.length>0) {
+      sumEl.style.display='block';
+      let txt=filtered.length+'건';
+      if(totalExp>0) txt+=' · 지출 <strong style="color:var(--red)">'+W(totalExp)+'</strong>';
+      if(totalInc>0) txt+=' · 수입 <strong style="color:var(--accent)">'+W(totalInc)+'</strong>';
+      sumEl.innerHTML=txt;
+    } else { sumEl.style.display='none'; }
+  }
+  const byCat={};
+  transactions.filter(t=>t.type==='지출').forEach(t=>{if(!byCat[t.category])byCat[t.category]=0;byCat[t.category]+=t.amount;});
+  renderCatFilters(byCat);
+  if(currentTxView==='list') renderTxList(filtered);
+  else renderCalendar(filtered);
+}
+
+function clearCatFilters() {
+  activeCatFilters.clear();
+  applyFilters();
+}
+
 function toggleCatFilter(cat) {
   if (activeCatFilters.has(cat)) activeCatFilters.delete(cat);
   else activeCatFilters.add(cat);
-  renderTxList();
-  renderCatFilters({}); // 필터 칩 리렌더
-  // 카테고리 byCat 재계산
-  const byCat = {};
-  transactions.filter(t=>t.type==='지출').forEach(t=>{ if(!byCat[t.category]) byCat[t.category]=0; byCat[t.category]+=t.amount; });
-  renderCatFilters(byCat);
+  applyFilters();
 }
 
 function renderTxList() {
@@ -1776,8 +1800,8 @@ function renderCalendar(filtered) {
   const cal = document.getElementById('b-tx-calendar');
   if (!cal) return;
   const { start, end } = getCycleRange(currentBudgetMonth);
-  const startDate = new Date(start);
-  const endDate = new Date(end);
+  const startDate = new Date(start + 'T00:00:00');
+  const endDate = new Date(end + 'T00:00:00');
   if (!filtered) filtered = getFilteredTx();
   
   const byDateExp = {}, byDateInc = {};
@@ -1786,24 +1810,28 @@ function renderCalendar(filtered) {
   const byDate = {};
   Object.keys({...byDateExp,...byDateInc}).forEach(d=>{ byDate[d]={exp:byDateExp[d]||0,inc:byDateInc[d]||0}; });
   
-  // 시작 날짜 기준 달력 - 여러 달에 걸칠 수 있음
   const days = ['일','월','화','수','목','금','토'];
   let html = '';
   
-  // 날짜 범위의 모든 달 순회
   let curMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
   while (curMonth <= endDate) {
     const y = curMonth.getFullYear(), m = curMonth.getMonth();
     const daysInMonth = new Date(y, m+1, 0).getDate();
     const firstDay = new Date(y, m, 1).getDay();
-    const monthLabel = `${y}년 ${m+1}월`;
+    const monthLabel = y + '년 ' + (m+1) + '월';
     
-    html += `<div style="margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:500;color:var(--text-sub);margin-bottom:10px;">${monthLabel}</div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;">`;
-    days.forEach(d => { html+=`<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">${d}</div>`; });
-    for (let i=0;i<firstDay;i++) html+='<div></div>';
-    for (let d=1;d<=daysInMonth;d++) {
+    // 이 달에서 실제로 보여줄 시작일
+    const isFirstMonth = (y === startDate.getFullYear() && m === startDate.getMonth());
+    const dayStart = isFirstMonth ? startDate.getDate() : 1;
+    // 시작일의 요일
+    const startDayOfWeek = isFirstMonth ? new Date(y, m, dayStart).getDay() : firstDay;
+    
+    html += '<div style="margin-bottom:20px;">';
+    html += '<div style="font-size:13px;font-weight:500;color:var(--text-sub);margin-bottom:10px;">' + monthLabel + '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;">';
+    days.forEach(d => { html+='<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">'+d+'</div>'; });
+    for (let i=0;i<startDayOfWeek;i++) html+='<div></div>';
+    for (let d=dayStart;d<=daysInMonth;d++) {
       const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const inRange = dateStr >= start && dateStr <= end;
       const dayData = byDate[dateStr]||{exp:0,inc:0};
