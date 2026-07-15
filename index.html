@@ -54,7 +54,7 @@ nav{width:var(--nav-w);min-height:100vh;background:var(--surface);border-right:1
 .nav-footer .updated{font-size:11px;color:var(--text-muted);}
 
 /* MAIN */
-main{margin-left:var(--nav-w);flex:1;min-height:100vh;display:block;}
+main{margin-left:var(--nav-w);flex:1;min-height:100vh;}
 .page{display:none;padding:36px 40px 80px;max-width:1100px;margin-left:0;}
 .page.active{display:block;}
 
@@ -393,7 +393,124 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     </div>
   </div>
 
-  <div class="page" id="page-home">
+</main>
+
+  <!-- 가계부 -->
+  <div class="page" id="page-budget" style="padding:0;max-width:100%;width:100%;">
+    <div style="display:grid;grid-template-columns:220px 1fr;height:100vh;overflow:hidden;">
+
+      <!-- 좌측 월별 패널 -->
+      <div style="background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
+          <button id="btn-add-expense" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--red);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">− 지출 추가</button>
+          <button id="btn-add-income" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">+ 수입 추가</button>
+        </div>
+        <div id="budget-month-list" style="flex:1;overflow-y:auto;padding:6px 0;"></div>
+      </div>
+
+      <!-- 우측 메인 -->
+      <div style="display:flex;flex-direction:column;overflow:hidden;">
+        <!-- 탭바 -->
+        <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+          <div style="display:flex;">
+            <button class="budget-tab active" id="btab-overview" onclick="switchBudgetTab('overview')">📊 대시보드</button>
+            <button class="budget-tab" id="btab-transactions" onclick="switchBudgetTab('transactions')">📋 사용내역</button>
+            <button class="budget-tab" id="btab-fixed" onclick="switchBudgetTab('fixed')">📌 고정지출</button>
+          </div>
+          <div id="budget-period-label" style="font-size:12px;color:var(--text-muted);"></div>
+        </div>
+
+        <!-- 컨텐츠 -->
+        <div style="flex:1;overflow-y:auto;padding:20px 24px;" id="budget-content">
+
+          <!-- 대시보드 탭 -->
+          <div id="budget-tab-overview">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
+              <div class="card accent" style="padding:14px 16px;"><div class="label">수입</div><div class="value" id="b-income" style="font-size:16px;">—</div><div class="sub" id="b-income-sub"></div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">고정지출</div><div class="value" id="b-fixed" style="font-size:16px;">—</div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">사용 가능</div><div class="value" id="b-usable" style="font-size:16px;">—</div><div class="sub">수입−고정</div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">변동지출</div><div class="value" id="b-variable" style="font-size:16px;">—</div><div class="sub" id="b-variable-sub"></div></div>
+              <div class="card" style="padding:14px 16px;"><div class="label">남은 돈</div><div class="value" id="b-remain" style="font-size:16px;">—</div><div class="sub" id="b-remain-sub"></div></div>
+            </div>
+            <!-- 예산 바 -->
+            <div class="box" style="margin-bottom:16px;">
+              <div class="box-head"><h2>예산 현황</h2></div>
+              <div class="box-body" style="display:flex;flex-direction:column;gap:14px;">
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">남은 예산 (사용가능 − 변동지출)</span><span id="b-var-label" style="font-weight:500;"></span></div>
+                  <div style="height:12px;background:var(--surface3);border-radius:6px;overflow:hidden;position:relative;">
+                    <div id="b-spent-bar" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--orange),var(--red));border-radius:6px;transition:width 0.5s;width:0%;"></div>
+                    <div id="b-remain-bar" style="position:absolute;right:0;top:0;height:100%;background:linear-gradient(90deg,var(--accent),#22d3ee);border-radius:6px;transition:width 0.5s;width:100%;"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px;"><span id="b-spent-lbl"></span><span id="b-remain-lbl"></span></div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">전체지출 / 수입</span><span id="b-total-label" style="font-weight:500;"></span></div>
+                  <div class="liq-bg"><div id="b-total-bar" class="liq-fill" style="width:0%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="g2">
+              <div class="box"><div class="box-head"><h2>카테고리별 지출</h2></div>
+                <div class="donut-wrap"><svg class="donut" viewBox="0 0 150 150" id="b-donut"></svg><div style="width:100%" id="b-cat-legend"></div></div>
+              </div>
+              <div class="box"><div class="box-head"><h2>💡 절약 인사이트</h2></div><div class="box-body" id="b-insights"></div></div>
+            </div>
+          </div>
+
+          <!-- 사용내역 탭 -->
+          <div id="budget-tab-transactions" style="display:none;">
+            <!-- 검색 -->
+            <div style="position:relative;margin-bottom:10px;">
+              <input type="text" id="b-search-input" placeholder="🔍 내역명, 카테고리 검색..." oninput="applyFilters()"
+                style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+            </div>
+            <!-- 뷰 전환 + 수입/지출 필터 -->
+            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <button id="tx-view-list" onclick="switchTxView('list')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
+                <button id="tx-view-cal" onclick="switchTxView('calendar')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
+              </div>
+              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <button id="f-all" onclick="setTypeFilter('')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">전체</button>
+                <button id="f-income" onclick="setTypeFilter('수입')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">수입</button>
+                <button id="f-expense" onclick="setTypeFilter('지출')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">지출</button>
+              </div>
+              <input type="hidden" id="b-filter-type-sel" value="">
+            </div>
+            <!-- 카테고리 필터 칩 -->
+            <div id="b-cat-filters" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;min-height:28px;"></div>
+            <!-- 필터 결과 요약 -->
+            <div id="b-filter-summary" style="display:none;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+            <!-- 목록/달력 뷰 -->
+            <div id="b-tx-list-view"><div class="box"><div id="b-tx-list"></div></div></div>
+            <div id="b-tx-cal-view" style="display:none;">
+              <div class="box"><div id="b-tx-calendar" style="padding:16px;"></div></div>
+              <div class="box" style="margin-top:12px;display:none;" id="b-cal-detail-box">
+                <div class="box-head"><h2 id="b-cal-detail-title"></h2></div>
+                <div id="b-cal-detail-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 고정지출 탭 -->
+          <div id="budget-tab-fixed" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+              <div><div style="font-size:13px;color:var(--text-sub);">매달 자동으로 나가는 고정지출</div>
+                <div style="font-size:20px;font-weight:600;color:var(--red);margin-top:4px;" id="b-fixed-total">—</div></div>
+              <button id="btn-add-fixed" class="btn btn-primary">+ 추가</button>
+            </div>
+            <div id="b-fixed-list"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 내집마련 -->
+  <div id="page-home" style="display:none;padding:36px 40px 80px;">
     <div class="page-header">
       <h1>🏠 내집마련 시뮬레이터</h1>
       <p>날짜 기준으로 우리 둘의 자산을 확인하고 집 매매 계획을 세워요</p>
@@ -601,123 +718,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
       </div>
     </div>
   </div>
-</main>
 
-  <!-- 가계부 -->
-  <div class="page" id="page-budget" style="padding:0;max-width:100%;width:100%;">
-    <div style="display:grid;grid-template-columns:220px 1fr;height:100vh;overflow:hidden;">
-
-      <!-- 좌측 월별 패널 -->
-      <div style="background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;">
-        <div style="padding:14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;">
-          <button id="btn-add-expense" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--red);color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">− 지출 추가</button>
-          <button id="btn-add-income" style="width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">+ 수입 추가</button>
-        </div>
-        <div id="budget-month-list" style="flex:1;overflow-y:auto;padding:6px 0;"></div>
-      </div>
-
-      <!-- 우측 메인 -->
-      <div style="display:flex;flex-direction:column;overflow:hidden;">
-        <!-- 탭바 -->
-        <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-          <div style="display:flex;">
-            <button class="budget-tab active" id="btab-overview" onclick="switchBudgetTab('overview')">📊 대시보드</button>
-            <button class="budget-tab" id="btab-transactions" onclick="switchBudgetTab('transactions')">📋 사용내역</button>
-            <button class="budget-tab" id="btab-fixed" onclick="switchBudgetTab('fixed')">📌 고정지출</button>
-          </div>
-          <div id="budget-period-label" style="font-size:12px;color:var(--text-muted);"></div>
-        </div>
-
-        <!-- 컨텐츠 -->
-        <div style="flex:1;overflow-y:auto;padding:20px 24px;" id="budget-content">
-
-          <!-- 대시보드 탭 -->
-          <div id="budget-tab-overview">
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;">
-              <div class="card accent" style="padding:14px 16px;"><div class="label">수입</div><div class="value" id="b-income" style="font-size:16px;">—</div><div class="sub" id="b-income-sub"></div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">고정지출</div><div class="value" id="b-fixed" style="font-size:16px;">—</div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">사용 가능</div><div class="value" id="b-usable" style="font-size:16px;">—</div><div class="sub">수입−고정</div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">변동지출</div><div class="value" id="b-variable" style="font-size:16px;">—</div><div class="sub" id="b-variable-sub"></div></div>
-              <div class="card" style="padding:14px 16px;"><div class="label">남은 돈</div><div class="value" id="b-remain" style="font-size:16px;">—</div><div class="sub" id="b-remain-sub"></div></div>
-            </div>
-            <!-- 예산 바 -->
-            <div class="box" style="margin-bottom:16px;">
-              <div class="box-head"><h2>예산 현황</h2></div>
-              <div class="box-body" style="display:flex;flex-direction:column;gap:14px;">
-                <div>
-                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">남은 예산 (사용가능 − 변동지출)</span><span id="b-var-label" style="font-weight:500;"></span></div>
-                  <div style="height:12px;background:var(--surface3);border-radius:6px;overflow:hidden;position:relative;">
-                    <div id="b-spent-bar" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,var(--orange),var(--red));border-radius:6px;transition:width 0.5s;width:0%;"></div>
-                    <div id="b-remain-bar" style="position:absolute;right:0;top:0;height:100%;background:linear-gradient(90deg,var(--accent),#22d3ee);border-radius:6px;transition:width 0.5s;width:100%;"></div>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px;"><span id="b-spent-lbl"></span><span id="b-remain-lbl"></span></div>
-                </div>
-                <div>
-                  <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;"><span style="color:var(--text-sub)">전체지출 / 수입</span><span id="b-total-label" style="font-weight:500;"></span></div>
-                  <div class="liq-bg"><div id="b-total-bar" class="liq-fill" style="width:0%;background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
-                </div>
-              </div>
-            </div>
-            <div class="g2">
-              <div class="box"><div class="box-head"><h2>카테고리별 지출</h2></div>
-                <div class="donut-wrap"><svg class="donut" viewBox="0 0 150 150" id="b-donut"></svg><div style="width:100%" id="b-cat-legend"></div></div>
-              </div>
-              <div class="box"><div class="box-head"><h2>💡 절약 인사이트</h2></div><div class="box-body" id="b-insights"></div></div>
-            </div>
-          </div>
-
-          <!-- 사용내역 탭 -->
-          <div id="budget-tab-transactions" style="display:none;">
-            <!-- 검색 -->
-            <div style="position:relative;margin-bottom:10px;">
-              <input type="text" id="b-search-input" placeholder="🔍 내역명, 카테고리 검색..." oninput="applyFilters()"
-                style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:9px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
-            </div>
-            <!-- 뷰 전환 + 수입/지출 필터 -->
-            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
-              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-                <button id="tx-view-list" onclick="switchTxView('list')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
-                <button id="tx-view-cal" onclick="switchTxView('calendar')" style="padding:6px 12px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
-              </div>
-              <div style="display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-                <button id="f-all" onclick="setTypeFilter('')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">전체</button>
-                <button id="f-income" onclick="setTypeFilter('수입')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">수입</button>
-                <button id="f-expense" onclick="setTypeFilter('지출')" style="padding:6px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">지출</button>
-              </div>
-              <input type="hidden" id="b-filter-type-sel" value="">
-            </div>
-            <!-- 카테고리 필터 칩 -->
-            <div id="b-cat-filters" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;min-height:28px;"></div>
-            <!-- 필터 결과 요약 -->
-            <div id="b-filter-summary" style="display:none;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
-            <!-- 목록/달력 뷰 -->
-            <div id="b-tx-list-view"><div class="box"><div id="b-tx-list"></div></div></div>
-            <div id="b-tx-cal-view" style="display:none;">
-              <div class="box"><div id="b-tx-calendar" style="padding:16px;"></div></div>
-              <div class="box" style="margin-top:12px;display:none;" id="b-cal-detail-box">
-                <div class="box-head"><h2 id="b-cal-detail-title"></h2></div>
-                <div id="b-cal-detail-list"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 고정지출 탭 -->
-          <div id="budget-tab-fixed" style="display:none;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-              <div><div style="font-size:13px;color:var(--text-sub);">매달 자동으로 나가는 고정지출</div>
-                <div style="font-size:20px;font-weight:600;color:var(--red);margin-top:4px;" id="b-fixed-total">—</div></div>
-              <button id="btn-add-fixed" class="btn btn-primary">+ 추가</button>
-            </div>
-            <div id="b-fixed-list"></div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- 내집마련 -->
   <!-- MODAL -->
   <!-- 자산 추가/수정 모달 -->
   <div class="modal-bg" id="modal-bg">
@@ -2358,15 +2359,14 @@ function renderHomeAssets() {
   const label = monthDiff===0?'현재 기준':monthDiff>0?monthDiff+'개월 후 기준':Math.abs(monthDiff)+'개월 전 기준';
   document.getElementById('home-date-label').textContent = label;
 
-  // 규원 자산 그룹화
   const DIA_GROUPS = [
-    { key:'현금', label:'💵 현금', icon:'💵', types:['현금'] },
-    { key:'국내주식', label:'📈 국내주식', icon:'📈', types:['국내주식'] },
-    { key:'해외주식', label:'🌍 해외주식', icon:'🌍', types:['해외주식'] },
-    { key:'전세', label:'🏠 전세보증금', icon:'🏠', types:['전세'] },
-    { key:'적금', label:'💰 적금', icon:'💰', types:['적금'] },
-    { key:'퇴직연금', label:'🏢 퇴직연금', icon:'🏢', types:['퇴직연금'] },
-    { key:'기타', label:'📦 기타', icon:'📦', types:['기타'] },
+    { key:'현금', label:'💵 현금', types:['현금'] },
+    { key:'국내주식', label:'📈 국내주식', types:['국내주식'] },
+    { key:'해외주식', label:'🌍 해외주식', types:['해외주식'] },
+    { key:'전세', label:'🏠 전세보증금', types:['전세'] },
+    { key:'적금', label:'💰 적금', types:['적금'] },
+    { key:'퇴직연금', label:'🏢 퇴직연금', types:['퇴직연금'] },
+    { key:'기타', label:'📦 기타', types:['기타'] },
   ];
 
   const diaList = document.getElementById('dia-asset-list');
@@ -2376,74 +2376,98 @@ function renderHomeAssets() {
     const groupAssets = diaAssets.filter(a => group.types.includes(a.type));
     if (groupAssets.length === 0) return;
 
-    const groupTotal = groupAssets.reduce((s,a) => {
+    // 날짜 기준 각 자산 유동성 + 금액 계산
+    const assetInfos = groupAssets.map(a => {
       const liq = getDiaLiquidity(a, dateStr);
       const earlyAmt = getDiaEarlyAmount(a);
-      const selected = homeSelectedDia.has(a.id);
-      return s + (selected && earlyAmt && liq==='비유동' ? earlyAmt : a.amount);
-    }, 0);
+      const isSelected = homeSelectedDia.has(a.id);
+      const displayAmt = isSelected && earlyAmt && liq==='비유동' ? earlyAmt : a.amount;
+      // 날짜 기반 예상 금액 (적금 등 월납입 반영)
+      let projectedAmt = a.amount;
+      if (a.monthly && a.monthly > 0 && a.start) {
+        const startD = new Date(a.start);
+        const months = Math.max(0, (target.getFullYear()-startD.getFullYear())*12 + (target.getMonth()-startD.getMonth()));
+        const nowMonths = Math.max(0, (now.getFullYear()-startD.getFullYear())*12 + (now.getMonth()-startD.getMonth()));
+        const additionalMonths = months - nowMonths;
+        if (additionalMonths > 0) projectedAmt = a.amount + a.monthly * additionalMonths;
+      }
+      return { asset: a, liq, earlyAmt, isSelected, displayAmt: isSelected && earlyAmt && liq==='비유동' ? earlyAmt : projectedAmt, projectedAmt };
+    });
 
-    const allSelected = groupAssets.every(a => homeSelectedDia.has(a.id));
-    const someSelected = groupAssets.some(a => homeSelectedDia.has(a.id));
-    const isImpossibleGroup = groupAssets.every(a => getDiaLiquidity(a, dateStr) === '불가');
+    const groupTotal = assetInfos.reduce((s, info) => s + info.displayAmt, 0);
+    const allSelected = assetInfos.every(info => info.isSelected);
+    const someSelected = assetInfos.some(info => info.isSelected);
+    const isImpossibleGroup = assetInfos.every(info => info.liq === '불가');
+
+    // 그룹 유동성 태그 (혼합이면 "혼합")
+    const liqs = [...new Set(assetInfos.map(i => i.liq))];
+    const groupLiq = liqs.length === 1 ? liqs[0] : '혼합';
+    const liqColor = groupLiq==='유동'?'var(--accent)':groupLiq==='비유동'?'var(--orange)':groupLiq==='혼합'?'var(--blue)':'var(--text-muted)';
+    const liqBg = groupLiq==='유동'?'rgba(74,222,128,0.15)':groupLiq==='비유동'?'rgba(251,146,60,0.15)':groupLiq==='혼합'?'rgba(56,189,248,0.15)':'var(--surface3)';
 
     // 그룹 헤더
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);cursor:'+(isImpossibleGroup?'not-allowed':'pointer')+';opacity:'+(isImpossibleGroup?0.4:1)+';';
-    header.onclick = isImpossibleGroup ? null : () => toggleDiaGroup(group.key, groupAssets, dateStr);
+    header.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface2);cursor:pointer;user-select:none;';
 
+    // 체크박스 (불가 그룹도 체크박스는 숨김)
     const checkbox = document.createElement('div');
     checkbox.style.cssText = 'width:18px;height:18px;border-radius:4px;border:2px solid '+(allSelected?'var(--accent)':someSelected?'var(--orange)':'var(--border2)')+';background:'+(allSelected?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;';
     checkbox.innerHTML = allSelected ? '<span style="color:#0e0f11;font-size:11px;font-weight:700;">✓</span>' : someSelected ? '<span style="color:var(--orange);font-size:11px;">−</span>' : '';
+    if (!isImpossibleGroup) {
+      checkbox.style.cursor = 'pointer';
+      checkbox.onclick = e => { e.stopPropagation(); toggleDiaGroup(group.key, groupAssets, dateStr); };
+    } else {
+      checkbox.style.opacity = '0.3';
+    }
 
     const groupLabel = document.createElement('div');
     groupLabel.style.cssText = 'flex:1;font-size:13px;font-weight:600;';
     groupLabel.textContent = group.label + (groupAssets.length > 1 ? ' ('+groupAssets.length+'개)' : '');
 
+    // 유동성 태그
+    const liqTag = document.createElement('span');
+    liqTag.style.cssText = 'font-size:10px;padding:2px 7px;border-radius:10px;background:'+liqBg+';color:'+liqColor+';flex-shrink:0;';
+    liqTag.textContent = groupLiq;
+
     const groupAmt = document.createElement('div');
     groupAmt.style.cssText = 'font-size:13px;font-weight:600;color:'+(allSelected?'var(--accent)':'var(--text)')+';';
     groupAmt.textContent = W(groupTotal);
 
-    const toggle = document.createElement('span');
-    toggle.style.cssText = 'font-size:11px;color:var(--text-muted);margin-left:4px;';
-    toggle.textContent = '▶';
+    // 접기/펼치기 화살표 (항목 1개 이상이면 항상 표시)
+    const chevron = document.createElement('span');
+    chevron.style.cssText = 'font-size:12px;color:var(--text-muted);margin-left:2px;transition:transform 0.2s;';
+    chevron.textContent = '▼';
 
     header.appendChild(checkbox);
     header.appendChild(groupLabel);
+    header.appendChild(liqTag);
     header.appendChild(groupAmt);
-    if (groupAssets.length > 1) header.appendChild(toggle);
+    if (groupAssets.length > 1) header.appendChild(chevron);
 
-    // 개별 항목 (2개 이상일 때만)
+    // 개별 항목들
     const itemsDiv = document.createElement('div');
-    itemsDiv.style.display = 'none';
+    itemsDiv.style.display = 'none'; // 기본 접힘
+    chevron.textContent = '▼';
+    chevron.style.transform = 'rotate(-90deg)'; // 접힌 상태 = 오른쪽 아닌 아래 방향 기본, 접히면 회전
 
+    // 헤더 클릭 = 펼치기/접기
     if (groupAssets.length > 1) {
-      header.onclick = isImpossibleGroup ? null : (e) => {
-        if (e.target === toggle || e.target === checkbox || e.target === checkbox.firstChild) {
-          toggleDiaGroup(group.key, groupAssets, dateStr);
-        } else {
-          itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
-          toggle.textContent = itemsDiv.style.display === 'none' ? '▶' : '▼';
-        }
+      header.onclick = () => {
+        const isOpen = itemsDiv.style.display !== 'none';
+        itemsDiv.style.display = isOpen ? 'none' : 'block';
+        chevron.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
       };
-      checkbox.onclick = (e) => { e.stopPropagation(); toggleDiaGroup(group.key, groupAssets, dateStr); };
-    } else {
-      header.onclick = isImpossibleGroup ? null : () => toggleDiaGroup(group.key, groupAssets, dateStr);
     }
 
-    groupAssets.forEach(asset => {
-      const liq = getDiaLiquidity(asset, dateStr);
-      const earlyAmt = getDiaEarlyAmount(asset);
+    assetInfos.forEach(({ asset, liq, earlyAmt, isSelected, displayAmt, projectedAmt }) => {
       const isPenalty = earlyAmt !== null && liq === '비유동';
       const isImpossible = liq === '불가';
-      const isSelected = homeSelectedDia.has(asset.id);
-      const displayAmt = isSelected && isPenalty ? earlyAmt : asset.amount;
-      const liqColor = liq==='유동'?'var(--accent)':liq==='비유동'?'var(--orange)':'var(--text-muted)';
-      const liqBg = liq==='유동'?'rgba(74,222,128,0.15)':liq==='비유동'?'rgba(251,146,60,0.15)':'var(--surface3)';
+      const itemLiqColor = liq==='유동'?'var(--accent)':liq==='비유동'?'var(--orange)':'var(--text-muted)';
+      const itemLiqBg = liq==='유동'?'rgba(74,222,128,0.15)':liq==='비유동'?'rgba(251,146,60,0.15)':'var(--surface3)';
 
       const item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 16px 8px 36px;cursor:'+(isImpossible?'not-allowed':'pointer')+';background:'+(isSelected?'var(--accent-dim)':'transparent')+';border-left:3px solid '+(isSelected?'var(--accent)':'transparent')+';transition:all 0.15s;opacity:'+(isImpossible?0.4:1)+';';
-      if (!isImpossible) item.onclick = (e) => { e.stopPropagation(); toggleDiaAsset(asset.id); };
+      item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 16px 8px 36px;cursor:'+(isImpossible?'not-allowed':'pointer')+';background:'+(isSelected?'var(--accent-dim)':'transparent')+';border-left:3px solid '+(isSelected?'var(--accent)':'transparent')+';transition:all 0.15s;opacity:'+(isImpossible?0.5:1)+';';
+      if (!isImpossible) item.onclick = e => { e.stopPropagation(); toggleDiaAsset(asset.id); };
 
       const cb = document.createElement('div');
       cb.style.cssText = 'width:15px;height:15px;border-radius:3px;border:2px solid '+(isSelected?'var(--accent)':'var(--border2)')+';background:'+(isSelected?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;';
@@ -2451,11 +2475,14 @@ function renderHomeAssets() {
 
       const nameDiv = document.createElement('div');
       nameDiv.style.cssText = 'flex:1;min-width:0;';
-      nameDiv.innerHTML = '<div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+asset.name+'</div>'+(isPenalty&&isSelected?'<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 '+W(earlyAmt)+' (원금 '+W(asset.amount)+')</div>':'');
+      let nameHtml = '<div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+asset.name+'</div>';
+      if (isPenalty && isSelected) nameHtml += '<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 '+W(earlyAmt)+'</div>';
+      else if (projectedAmt !== asset.amount) nameHtml += '<div style="font-size:10px;color:var(--text-muted);">현재 '+W(asset.amount)+' → 예상 '+W(projectedAmt)+'</div>';
+      nameDiv.innerHTML = nameHtml;
 
       const amtDiv = document.createElement('div');
-      amtDiv.style.cssText = 'text-align:right;flex-shrink:0;';
-      amtDiv.innerHTML = '<div style="font-size:12px;font-weight:600;">'+W(displayAmt)+'</div><span style="font-size:9px;padding:2px 5px;border-radius:8px;background:'+liqBg+';color:'+liqColor+';">'+liq+'</span>';
+      amtDiv.style.cssText = 'text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px;';
+      amtDiv.innerHTML = '<div style="font-size:12px;font-weight:600;">'+W(displayAmt)+'</div><span style="font-size:9px;padding:2px 5px;border-radius:8px;background:'+itemLiqBg+';color:'+itemLiqColor+';">'+liq+'</span>';
 
       item.appendChild(cb); item.appendChild(nameDiv); item.appendChild(amtDiv);
       itemsDiv.appendChild(item);
@@ -2463,10 +2490,9 @@ function renderHomeAssets() {
 
     diaList.appendChild(header);
     if (groupAssets.length > 1) diaList.appendChild(itemsDiv);
-
   });
 
-  // 성재 자산 (그대로)
+  // 성재 자산
   const sjList = document.getElementById('sj-asset-list');
   sjList.innerHTML = '';
   partnerAssets.forEach(asset => {
@@ -2479,7 +2505,7 @@ function renderHomeAssets() {
     const liqBg = liquidity==='유동'?'rgba(74,222,128,0.15)':liquidity==='비유동'?'rgba(251,146,60,0.15)':'var(--surface3)';
 
     const item = document.createElement('div');
-    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:'+(isImpossible?'not-allowed':'pointer')+';background:'+(isSelected?'var(--accent-dim)':'transparent')+';border-left:3px solid '+(isSelected?'var(--accent)':'transparent')+';transition:all 0.15s;opacity:'+(isImpossible?0.4:1)+';';
+    item.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:'+(isImpossible?'not-allowed':'pointer')+';background:'+(isSelected?'var(--accent-dim)':'transparent')+';border-left:3px solid '+(isSelected?'var(--accent)':'transparent')+';transition:all 0.15s;opacity:'+(isImpossible?0.5:1)+';';
     if (!isImpossible) item.onclick = () => toggleSjAsset(asset.id);
 
     const cb = document.createElement('div');
@@ -2488,7 +2514,7 @@ function renderHomeAssets() {
 
     const nameDiv = document.createElement('div');
     nameDiv.style.cssText = 'flex:1;min-width:0;';
-    nameDiv.innerHTML = '<div style="font-size:13px;">'+asset.name+'</div><div style="font-size:11px;color:var(--text-muted);">'+( asset.memo||'')+'</div>'+(isPenalty&&isSelected?'<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 '+W(asset.early_amount)+'원</div>':'');
+    nameDiv.innerHTML = '<div style="font-size:13px;">'+asset.name+'</div><div style="font-size:11px;color:var(--text-muted);">'+(asset.memo||'')+'</div>'+(isPenalty&&isSelected?'<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 '+W(asset.early_amount)+'원</div>':'');
 
     const amtDiv = document.createElement('div');
     amtDiv.style.cssText = 'text-align:right;flex-shrink:0;';
