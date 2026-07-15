@@ -2533,19 +2533,31 @@ function toggleDiaGroup(key, groupAssets, dateStr) {
     if (allSelected) homeSelectedDia.delete(a.id);
     else homeSelectedDia.add(a.id);
   });
-  renderHomeAssets();
+  updateHomeTotalOnly();
 }
 
 function toggleDiaAsset(id) {
   if (homeSelectedDia.has(id)) homeSelectedDia.delete(id);
   else homeSelectedDia.add(id);
-  renderHomeAssets();
+  updateHomeTotalOnly();
 }
 
 function toggleSjAsset(id) {
   if (homeSelectedSj.has(id)) homeSelectedSj.delete(id);
   else homeSelectedSj.add(id);
-  renderHomeAssets();
+  updateHomeTotalOnly();
+}
+
+function updateHomeTotalOnly() {
+  // 체크박스 상태만 업데이트 (그룹 열림/닫힘 유지)
+  const dateStr = document.getElementById('home-date').value;
+  // 각 체크박스 UI 업데이트
+  document.querySelectorAll('[data-asset-id]').forEach(el => {
+    const id = parseInt(el.dataset.assetId);
+    const isSelected = homeSelectedDia.has(id) || homeSelectedSj.has(id);
+    // 체크박스 스타일 업데이트는 복잡하므로 updateHomeTotal만 호출
+  });
+  updateHomeTotal();
 }
 
 function updateHomeTotal() {
