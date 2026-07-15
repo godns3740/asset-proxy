@@ -1936,21 +1936,41 @@ function renderFixedList() {
   const el = document.getElementById('b-fixed-total'); if(el) el.textContent = '월 ' + W(total);
   const byGroup = {};
   fixedExpenses.forEach(f=>{ if(!byGroup[f.category]) byGroup[f.category]=[]; byGroup[f.category].push(f); });
-  list.innerHTML = Object.entries(byGroup).map(([cat,items])=>{
+  list.innerHTML = '';
+  Object.entries(byGroup).forEach(([cat,items]) => {
     const catTotal = items.reduce((s,f)=>s+f.amount,0);
-    return '<div class="cat-section open">' +
-      '<div class="cat-row" onclick="this.parentElement.classList.toggle('open')">' +
-      '<div class="cat-tag"><div class="cat-dot" style="background:var(--blue)"></div>' + cat + '</div>' +
-      '<div class="cat-meta"><span class="cat-total">' + W(catTotal) + '</span><span class="chevron">▼</span></div></div>' +
-      '<div class="asset-items">' +
-      items.map(f=>'<div class="asset-row">' +
-        '<div style="flex:1;font-size:13px;color:var(--text-sub);">' + f.name + '</div>' +
+    const section = document.createElement('div');
+    section.className = 'cat-section open';
+    const header = document.createElement('div');
+    header.className = 'cat-row';
+    header.onclick = () => section.classList.toggle('open');
+    header.innerHTML = '<div class="cat-tag"><div class="cat-dot" style="background:var(--blue)"></div>' + cat + '</div>' +
+      '<div class="cat-meta"><span class="cat-total">' + W(catTotal) + '</span><span class="chevron">▼</span></div>';
+    const itemsDiv = document.createElement('div');
+    itemsDiv.className = 'asset-items';
+    items.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'asset-row';
+      row.innerHTML = '<div style="flex:1;font-size:13px;color:var(--text-sub);">' + f.name + '</div>' +
         '<div style="font-size:13px;font-weight:500;">' + W(f.amount) + '</div>' +
-        '<div class="asset-actions">' +
-        '<button class="btn-icon" onclick="openFixedModal(' + f.id + ')">수정</button>' +
-        '<button class="btn-icon del" onclick="deleteFixed(' + f.id + ')">삭제</button></div></div>'
-      ).join('') + '</div></div>';
-  }).join('');
+        '<div class="asset-actions"></div>';
+      const actions = row.querySelector('.asset-actions');
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn-icon';
+      editBtn.textContent = '수정';
+      editBtn.onclick = () => openFixedModal(f.id);
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-icon del';
+      delBtn.textContent = '삭제';
+      delBtn.onclick = () => deleteFixed(f.id);
+      actions.appendChild(editBtn);
+      actions.appendChild(delBtn);
+      itemsDiv.appendChild(row);
+    });
+    section.appendChild(header);
+    section.appendChild(itemsDiv);
+    list.appendChild(section);
+  });
 }
 
 // ── 날짜 피커 ────────────────────────────────────────────────────
