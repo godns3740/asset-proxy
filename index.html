@@ -2005,17 +2005,23 @@ function changePickerMonth(dir) {
   renderPickerDays();
 }
 function renderPickerDays() {
-  const container=document.getElementById('picker-days'); if(!container) return;
-  const today=new Date().toISOString().slice(0,10), sel=document.getElementById('t-date')?.value||'';
-  const dim=new Date(pickerYear,pickerMonth+1,0).getDate(), fd=new Date(pickerYear,pickerMonth,1).getDay();
-  let html='';
-  for(let i=0;i<fd;i++) html+='<div></div>';
-  for(let d=1;d<=dim;d++){
-    const ds=pickerYear+'-'+String(pickerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const isSel=ds===sel,isToday=ds===today;
-    html+='<div onclick="pickDate(''+ds+'')" style="padding:5px 1px;border-radius:5px;cursor:pointer;font-size:12px;text-align:center;background:'+(isSel?'var(--accent)':isToday?'var(--accent-dim)':'transparent')+';color:'+(isSel?'#0e0f11':isToday?'var(--accent)':'var(--text)')+';font-weight:'+(isSel||isToday?'600':'400')+';">'+d+'</div>';
+  const container = document.getElementById('picker-days');
+  if (!container) return;
+  const today = new Date().toISOString().slice(0,10);
+  const sel = document.getElementById('t-date')?.value || '';
+  const dim = new Date(pickerYear, pickerMonth+1, 0).getDate();
+  const fd = new Date(pickerYear, pickerMonth, 1).getDay();
+  container.innerHTML = '';
+  for (let i=0; i<fd; i++) container.appendChild(document.createElement('div'));
+  for (let d=1; d<=dim; d++) {
+    const ds = pickerYear+'-'+String(pickerMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isSel=ds===sel, isToday=ds===today;
+    const cell = document.createElement('div');
+    cell.style.cssText = 'padding:5px 1px;border-radius:5px;cursor:pointer;font-size:12px;text-align:center;background:'+(isSel?'var(--accent)':isToday?'var(--accent-dim)':'transparent')+';color:'+(isSel?'#0e0f11':isToday?'var(--accent)':'var(--text)')+';font-weight:'+(isSel||isToday?'600':'400')+';';
+    cell.onclick = (function(date){ return function(){ pickDate(date); }; })(ds);
+    cell.textContent = d;
+    container.appendChild(cell);
   }
-  container.innerHTML=html;
 }
 function pickDate(ds){updateDateDisplay(ds);const p=document.getElementById('t-date-picker');if(p)p.style.display='none';renderPickerDays();}
 function selectToday(){pickDate(new Date().toISOString().slice(0,10));}
@@ -2106,31 +2112,52 @@ async function createCat(name) {
 }
 function openCatMenu(event, id, name, color) {
   document.getElementById('cat-ctx-menu')?.remove();
-  const menu=document.createElement('div');
-  menu.id='cat-ctx-menu';
-  menu.style.cssText='position:fixed;z-index:400;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:150px;';
-  menu.style.left=event.clientX+'px'; menu.style.top=event.clientY+'px';
-  menu.innerHTML=
-    '<div style="padding:5px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);">'+name+'</div>'+
-    '<div onclick="renameCat('+id+',''+name+'')" style="padding:7px 10px;cursor:pointer;font-size:12px;border-radius:6px;" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">✏️ 이름 변경</div>'+
-    '<div onclick="changeCatColor('+id+',''+color+'')" style="padding:7px 10px;cursor:pointer;font-size:12px;border-radius:6px;" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🎨 색상 변경</div>'+
-    '<div onclick="deleteCatItem('+id+',''+name+'')" style="padding:7px 10px;cursor:pointer;font-size:12px;color:var(--red);border-radius:6px;" onmouseenter="this.style.background='var(--red-dim)'" onmouseleave="this.style.background=''">🗑️ 삭제</div>';
+  const menu = document.createElement('div');
+  menu.id = 'cat-ctx-menu';
+  menu.style.cssText = 'position:fixed;z-index:400;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:150px;';
+  menu.style.left = event.clientX + 'px';
+  menu.style.top = event.clientY + 'px';
+
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:5px 10px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);';
+  header.textContent = name;
+  menu.appendChild(header);
+
+  const items = [
+    { label: '✏️ 이름 변경', fn: () => renameCat(id, name), color: null },
+    { label: '🎨 색상 변경', fn: () => changeCatColor(id, color), color: null },
+    { label: '🗑️ 삭제', fn: () => deleteCatItem(id, name), color: 'var(--red)' },
+  ];
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:7px 10px;cursor:pointer;font-size:12px;border-radius:6px;' + (item.color ? 'color:'+item.color+';' : '');
+    div.onmouseenter = () => div.style.background = item.color ? 'var(--red-dim)' : 'var(--surface2)';
+    div.onmouseleave = () => div.style.background = '';
+    div.onclick = () => { item.fn(); menu.remove(); };
+    div.textContent = item.label;
+    menu.appendChild(div);
+  });
+
   document.body.appendChild(menu);
-  setTimeout(()=>document.addEventListener('click',()=>menu.remove(),{once:true}),50);
+  setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 50);
 }
 async function renameCat(id,oldName){
   const n=prompt('새 이름:',oldName); if(!n||n===oldName) return;
   await fetch(PROXY_BASE_URL+'/api/categories',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name:n})});
   await loadCategories(); document.getElementById('cat-ctx-menu')?.remove();
 }
-async function changeCatColor(id,cur){
-  const cols=['#fb923c','#f97316','#f59e0b','#4ade80','#22d3ee','#38bdf8','#a78bfa','#c084fc','#818cf8','#f472b6','#fb7185','#f43f5e','#e879f9','#fbbf24','#6b7280','#94a3b8'];
-  const picker=document.createElement('div');
-  picker.style.cssText='position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:grid;grid-template-columns:repeat(8,1fr);gap:5px;';
-  picker.style.left='50%'; picker.style.top='50%'; picker.style.transform='translate(-50%,-50%)';
-  picker.innerHTML=cols.map(col=>'<div onclick="applyColor('+id+',''+col+'')" style="width:26px;height:26px;border-radius:50%;background:'+col+';cursor:pointer;border:3px solid '+(col===cur?'white':'transparent')+';"></div>').join('');
+async function changeCatColor(id, cur) {
+  const cols = ['#fb923c','#f97316','#f59e0b','#4ade80','#22d3ee','#38bdf8','#a78bfa','#c084fc','#818cf8','#f472b6','#fb7185','#f43f5e','#e879f9','#fbbf24','#6b7280','#94a3b8'];
+  const picker = document.createElement('div');
+  picker.style.cssText = 'position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:10px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:grid;grid-template-columns:repeat(8,1fr);gap:5px;left:50%;top:50%;transform:translate(-50%,-50%);';
+  cols.forEach(col => {
+    const dot = document.createElement('div');
+    dot.style.cssText = 'width:26px;height:26px;border-radius:50%;background:'+col+';cursor:pointer;border:3px solid '+(col===cur?'white':'transparent')+';';
+    dot.onclick = () => { picker.remove(); applyColor(id, col); };
+    picker.appendChild(dot);
+  });
   document.body.appendChild(picker);
-  setTimeout(()=>document.addEventListener('click',()=>picker.remove(),{once:true}),50);
+  setTimeout(() => document.addEventListener('click', () => picker.remove(), { once: true }), 50);
 }
 async function applyColor(id,color){
   document.querySelectorAll('[style*="position:fixed"][style*="z-index:500"]').forEach(e=>e.remove());
