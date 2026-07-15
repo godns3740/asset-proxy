@@ -1684,16 +1684,28 @@ function applyFilters() {
 function renderCatFilterChips(byCat) {
   const container = document.getElementById('b-cat-filters');
   if (!container) return;
+  container.innerHTML = '';
   const cats = Object.keys(byCat).sort();
   const allActive = activeCatFilters.size === 0;
-  let html = '<span onclick="clearCatFilters()" style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid ' + (allActive?'var(--accent)':'var(--border)') + ';background:' + (allActive?'var(--accent-dim)':'transparent') + ';color:' + (allActive?'var(--accent)':'var(--text-muted)') + ';font-weight:' + (allActive?'600':'400') + ';">전체</span>';
+
+  const allSpan = document.createElement('span');
+  allSpan.onclick = clearCatFilters;
+  allSpan.style.cssText = 'display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid '+(allActive?'var(--accent)':'var(--border)')+';background:'+(allActive?'var(--accent-dim)':'transparent')+';color:'+(allActive?'var(--accent)':'var(--text-muted)')+';font-weight:'+(allActive?'600':'400')+';';
+  allSpan.textContent = '전체';
+  container.appendChild(allSpan);
+
   cats.forEach(cat => {
     const active = activeCatFilters.has(cat);
     const color = BUDGET_CAT_COLORS[cat] || '#6b7280';
-    html += '<span onclick="toggleCatFilter(" + '"' + cat + '"' + ")" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid ' + (active?color:'var(--border)') + ';background:' + (active?color+'22':'transparent') + ';color:' + (active?color:'var(--text-muted)') + ';">' +
-      '<span style="width:6px;height:6px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>' + cat + '</span>';
+    const span = document.createElement('span');
+    span.onclick = () => toggleCatFilter(cat);
+    span.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid '+(active?color:'var(--border)')+';background:'+(active?color+'22':'transparent')+';color:'+(active?color:'var(--text-muted)')+';';
+    const dot = document.createElement('span');
+    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:'+color+';flex-shrink:0;';
+    span.appendChild(dot);
+    span.appendChild(document.createTextNode(cat));
+    container.appendChild(span);
   });
-  container.innerHTML = html;
 }
 
 function toggleCatFilter(cat) {
