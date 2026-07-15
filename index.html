@@ -2022,9 +2022,7 @@ async function handleRefresh() {
   if (st) st.textContent = `마지막 업데이트: ${new Date().toLocaleTimeString('ko-KR')}`;
 }
 
-document.getElementById('modal-bg').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
+const _mb = document.getElementById('modal-bg'); if(_mb) _mb.addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
 // 숫자 입력 필드: 숫자와 소수점만 허용, 앞자리 0 제거
 document.querySelectorAll('.num-input').forEach(input => {
