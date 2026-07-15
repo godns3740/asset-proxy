@@ -477,10 +477,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
                   <button id="tx-view-list" onclick="switchTxView('list')" style="padding:7px 14px;font-size:12px;font-family:inherit;background:var(--accent);color:#0e0f11;border:none;cursor:pointer;font-weight:500;">📋 목록</button>
                   <button id="tx-view-cal" onclick="switchTxView('calendar')" style="padding:7px 14px;font-size:12px;font-family:inherit;background:transparent;color:var(--text-sub);border:none;cursor:pointer;">📅 달력</button>
                 </div>
-                <select id="b-filter-type" onchange="applyFilters()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:inherit;">
+                <select id="b-filter-type" id="b-filter-type-sel" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;font-family:inherit;">
                   <option value="">전체</option><option value="수입">수입</option><option value="지출">지출</option>
                 </select>
-                <input type="text" id="b-search" placeholder="🔍 검색 (예: 커피, 올리브영)" oninput="applyFilters()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:8px;font-size:12px;font-family:inherit;width:200px;outline:none;">
+                <input type="text" id="b-search" placeholder="🔍 검색 (예: 커피, 올리브영)" id="b-search-input" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:8px;font-size:12px;font-family:inherit;width:200px;outline:none;">
               </div>
               <div id="b-cat-filters" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
               <div id="b-filter-summary" style="display:none;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:13px;"></div>
@@ -1488,7 +1488,7 @@ function toggleCatFilter(cat) {
 function renderTxList() {
   const txList = document.getElementById('b-tx-list');
   if (!txList) return;
-  const filterType = document.getElementById('b-filter-type')?.value || '';
+  const filterType = document.getElementById('b-filter-type-sel')?.value || '';
   let filtered = [...transactions];
   if (filterType) filtered = filtered.filter(t=>t.type===filterType);
   if (activeCatFilters.size>0) filtered = filtered.filter(t=>activeCatFilters.has(t.category));
@@ -1522,8 +1522,8 @@ function renderTxList() {
 }
 
 function getFilteredTx() {
-  const filterType = document.getElementById('b-filter-type')?.value || '';
-  const search = (document.getElementById('b-search')?.value || '').trim().toLowerCase();
+  const filterType = document.getElementById('b-filter-type-sel')?.value || '';
+  const search = (document.getElementById('b-search-input')?.value || '').trim().toLowerCase();
   let filtered = [...transactions];
   if (filterType) filtered = filtered.filter(t => t.type === filterType);
   if (activeCatFilters.size > 0) filtered = filtered.filter(t => activeCatFilters.has(t.category));
@@ -1573,7 +1573,7 @@ function renderCalendar(filtered) {
       const inRange = dateStr >= start && dateStr <= end;
       const dayData = byDate[dateStr]||{exp:0,inc:0};
       const hasData = inRange && (dayData.exp>0||dayData.inc>0);
-      const isFiltered = activeCatFilters.size > 0 || (document.getElementById('b-filter-type')?.value) || (document.getElementById('b-search')?.value?.trim());
+      const isFiltered = activeCatFilters.size > 0 || (document.getElementById('b-filter-type-sel')?.value) || (document.getElementById('b-search-input')?.value?.trim());
       const dimmed = inRange && isFiltered && !hasData;
       html+=`<div onclick="${hasData?`showDayDetail('${dateStr}')`:''}" style="
         padding:4px 2px;border-radius:6px;cursor:${hasData?'pointer':'default'};
@@ -1849,6 +1849,12 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   if (PROXY_BASE_URL) fetchPrices();
   
   // 가계부 버튼 이벤트
+  // 가계부 필터 이벤트
+  const filterTypeSel = document.getElementById('b-filter-type-sel');
+  const searchInput = document.getElementById('b-search-input');
+  if (filterTypeSel) filterTypeSel.addEventListener('change', () => { if(typeof applyFilters==='function') applyFilters(); });
+  if (searchInput) searchInput.addEventListener('input', () => { if(typeof applyFilters==='function') applyFilters(); });
+
   const btnExp = document.getElementById('btn-add-expense');
   const btnInc = document.getElementById('btn-add-income');
   const btnFix = document.getElementById('btn-add-fixed');
