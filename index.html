@@ -510,7 +510,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
 
   <!-- 내집마련 -->
-  <div class="page" id="page-home">
+  <div id="page-home" style="display:none;padding:36px 40px 80px;">
     <div class="page-header">
       <h1>🏠 내집마련 시뮬레이터</h1>
       <p>날짜 기준으로 우리 둘의 자산을 확인하고 집 매매 계획을 세워요</p>
@@ -627,6 +627,33 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
         </div>
       </div>
 
+      <!-- 추가 비용 입력 -->
+      <div class="box" style="margin-bottom:20px;">
+        <div class="box-head"><h2>🛋️ 추가 비용 설정</h2><span style="font-size:12px;color:var(--text-muted);">자금에서 차감됩니다</span></div>
+        <div class="box-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">🎨 인테리어 비용</label>
+              <input type="text" inputmode="numeric" id="cost-interior" placeholder="0원" class="num-input" oninput="fmtNum(this);recalcWithCosts()"
+                style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">📺 가전/가구 비용</label>
+              <input type="text" inputmode="numeric" id="cost-appliance" placeholder="0원" class="num-input" oninput="fmtNum(this);recalcWithCosts()"
+                style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;box-sizing:border-box;">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:9px;font-size:13px;">
+            <span style="color:var(--text-sub);">추가 비용 합계</span>
+            <span id="cost-total" style="font-weight:600;color:var(--red);">0원</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--accent-dim);border-radius:9px;font-size:13px;margin-top:8px;">
+            <span style="color:var(--text-sub);">실제 사용 가능 자금</span>
+            <span id="cost-effective-money" style="font-weight:700;color:var(--accent);">—</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 목표 집값 슬라이더 -->
       <div class="box" style="margin-bottom:20px;">
         <div class="box-head"><h2>🎯 목표 집값 설정</h2><span style="font-size:14px;font-weight:700;color:var(--accent);" id="slider-price-label">5억원</span></div>
@@ -676,7 +703,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
             </div>
             <!-- 고정지출 -->
             <div>
-              <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:500;">📌 월 고정지출</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-size:12px;color:var(--text-muted);font-weight:500;">📌 월 고정지출</div>
+                <button onclick="openPlanFixedEditor()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text-sub);border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit;">✏️ 편집</button>
+              </div>
               <div id="plan-fixed-list" style="display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto;"></div>
             </div>
           </div>
@@ -851,6 +881,32 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
           <button id="btn-tx-cancel" class="btn btn-ghost" style="flex:1;justify-content:center;">취소</button>
           <button id="btn-tx-save" class="btn btn-primary" style="flex:2;justify-content:center;font-weight:600;">저장</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 매매계획 고정지출 편집 모달 -->
+  <div class="modal-bg" id="plan-fixed-modal">
+    <div class="modal" style="width:500px;max-width:95vw;">
+      <h3>📌 고정지출 편집</h3>
+      <div style="max-height:400px;overflow-y:auto;margin-bottom:16px;">
+        <!-- 규원 고정지출 -->
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:500;">👩 규원 고정지출 (DB 연동)</div>
+        <div id="plan-fixed-dia-list" style="margin-bottom:16px;"></div>
+        <!-- 성재 고정지출 -->
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:500;">👨 성재 고정지출</div>
+        <div id="plan-fixed-sj-list" style="margin-bottom:16px;"></div>
+        <!-- 추가 항목 -->
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:500;">➕ 추가 항목</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="plan-new-fixed-name" placeholder="항목명" style="flex:1;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;outline:none;">
+          <input type="text" inputmode="numeric" id="plan-new-fixed-amt" placeholder="금액" class="num-input" oninput="fmtNum(this)" style="width:120px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;outline:none;">
+          <button onclick="addPlanFixed()" style="background:var(--accent);border:none;color:#0e0f11;border-radius:8px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;font-weight:600;">추가</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closePlanFixedEditor()">닫기</button>
+        <button class="btn btn-primary" onclick="savePlanFixed()">저장</button>
       </div>
     </div>
   </div>
@@ -2661,6 +2717,8 @@ function calcPlanFixed() {
     const linked = f.linked_asset && selectedSjNames.has(f.linked_asset);
     if (!linked) total += f.amount;
   });
+  // 추가 고정지출
+  planExtraFixed.forEach(f => total += f.amount);
   return total;
 }
 
@@ -2674,7 +2732,9 @@ function onSliderChange(val) {
 }
 
 function updateSliderCalc(housePrice) {
-  const ourMoney = homeAppliedTotal;
+  const ourMoney = getEffectiveMoney();
+  // 추가 비용 표시 업데이트
+  recalcWithCosts();
   const need30 = Math.round(housePrice * 0.3);
   const loan70 = Math.round(housePrice * 0.7);
   const actualLoan = Math.min(loan70, SAMSUNG_MAX_LOAN);
@@ -2821,6 +2881,116 @@ function renderPlanFixedList() {
 }
 
 
+// 매매계획 추가 고정지출 (편집 가능)
+let planExtraFixed = [];
+
+function getExtraCosts() {
+  const interior = parseInt(document.getElementById('cost-interior')?.dataset.raw || '0') || 0;
+  const appliance = parseInt(document.getElementById('cost-appliance')?.dataset.raw || '0') || 0;
+  return interior + appliance;
+}
+
+function getEffectiveMoney() {
+  return Math.max(0, homeAppliedTotal - getExtraCosts());
+}
+
+function recalcWithCosts() {
+  const extraCosts = getExtraCosts();
+  const effective = homeAppliedTotal - extraCosts;
+  const costEl = document.getElementById('cost-total');
+  const effEl = document.getElementById('cost-effective-money');
+  if (costEl) costEl.textContent = W(extraCosts);
+  if (effEl) {
+    effEl.textContent = W(Math.max(0, effective));
+    effEl.style.color = effective >= 0 ? 'var(--accent)' : 'var(--red)';
+  }
+  // 자동 계산 박스도 업데이트
+  const effectiveMoney = Math.max(0, effective);
+  const housePriceAuto = Math.floor(effectiveMoney / 0.3);
+  const maxLoanAuto = Math.min(Math.floor(housePriceAuto * 0.7), SAMSUNG_MAX_LOAN);
+  const housePriceFinal = effectiveMoney + maxLoanAuto;
+  const taxes = calcTax(housePriceFinal);
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  set('plan-our-money', W(effectiveMoney));
+  set('plan-max-loan', W(maxLoanAuto));
+  set('plan-house-price', W(housePriceFinal));
+  set('plan-tax', W(taxes.total));
+  set('plan-tax-detail', '취득세 '+W(taxes.tax)+' + 등록비 '+W(taxes.regFee)+' + 중개 '+W(taxes.agentFee));
+  // 슬라이더도 업데이트
+  const slider = document.getElementById('plan-price-slider');
+  if (slider) {
+    updateSliderCalc(parseInt(slider.value));
+    updateMonthlyCalc(parseInt(slider.value));
+  }
+}
+
+// 고정지출 편집 모달
+function openPlanFixedEditor() {
+  // 규원 고정지출 목록
+  const diaList = document.getElementById('plan-fixed-dia-list');
+  if (diaList) {
+    diaList.innerHTML = fixedExpenses.map(f =>
+      '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">' +
+      '<span style="flex:1;font-size:13px;">'+f.name+'</span>' +
+      '<span style="font-size:13px;font-weight:500;color:var(--text-sub);">'+W(f.amount)+'</span>' +
+      '<span style="font-size:11px;color:var(--text-muted);">(DB)</span>' +
+      '</div>'
+    ).join('');
+  }
+  // 성재 고정지출 목록 (편집 가능)
+  renderPlanSjFixedEditor();
+  const bg = document.getElementById('plan-fixed-modal');
+  if (bg) bg.classList.add('open');
+}
+
+function renderPlanSjFixedEditor() {
+  const sjList = document.getElementById('plan-fixed-sj-list');
+  if (!sjList) return;
+  // 기본 SJ_FIXED + planExtraFixed
+  const allSj = [...SJ_FIXED, ...planExtraFixed];
+  sjList.innerHTML = '';
+  allSj.forEach((f, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);';
+    const isExtra = idx >= SJ_FIXED.length;
+    row.innerHTML = '<span style="flex:1;font-size:13px;">'+f.name+'</span>' +
+      '<span style="font-size:13px;font-weight:500;color:var(--text-sub);">'+W(f.amount)+'</span>' +
+      (isExtra ? '<button onclick="removePlanFixed('+( idx-SJ_FIXED.length)+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 6px;">✕</button>' : '<span style="font-size:11px;color:var(--text-muted);">기본</span>');
+    sjList.appendChild(row);
+  });
+}
+
+function addPlanFixed() {
+  const name = document.getElementById('plan-new-fixed-name')?.value.trim();
+  const amt = parseInt(document.getElementById('plan-new-fixed-amt')?.dataset.raw || '0') || 0;
+  if (!name || !amt) { showToast('항목명과 금액을 입력해주세요'); return; }
+  planExtraFixed.push({ name, amount: amt, linked_asset: null });
+  document.getElementById('plan-new-fixed-name').value = '';
+  document.getElementById('plan-new-fixed-amt').value = '';
+  document.getElementById('plan-new-fixed-amt').dataset.raw = '';
+  renderPlanSjFixedEditor();
+}
+
+function removePlanFixed(idx) {
+  planExtraFixed.splice(idx, 1);
+  renderPlanSjFixedEditor();
+}
+
+function closePlanFixedEditor() {
+  const bg = document.getElementById('plan-fixed-modal');
+  if (bg) bg.classList.remove('open');
+}
+
+function savePlanFixed() {
+  closePlanFixedEditor();
+  const slider = document.getElementById('plan-price-slider');
+  if (slider) {
+    renderPlanFixedList();
+    updateMonthlyCalc(parseInt(slider.value));
+  }
+  showToast('저장됐어요', true);
+}
+
 function switchHomeTab(tab) {
   document.getElementById('home-tab-assets').style.display = tab==='assets'?'block':'none';
   document.getElementById('home-tab-plan').style.display = tab==='plan'?'block':'none';
@@ -2884,6 +3054,10 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
   renderAssets();
   if (PROXY_BASE_URL) fetchPrices();
 
+  // 매매계획 고정지출 편집 모달
+  const pfModal = document.getElementById('plan-fixed-modal');
+  if (pfModal) pfModal.addEventListener('click', e => { if(e.target===pfModal) closePlanFixedEditor(); });
+
   // 가계부 버튼
   const _btnExp = document.getElementById('btn-add-expense');
   const _btnInc = document.getElementById('btn-add-income');
@@ -2919,6 +3093,10 @@ document.getElementById('sim-date').value = d.getFullYear() + '-' + String(d.get
     }
   });
   
+  // 매매계획 고정지출 편집 모달
+  const pfModal = document.getElementById('plan-fixed-modal');
+  if (pfModal) pfModal.addEventListener('click', e => { if(e.target===pfModal) closePlanFixedEditor(); });
+
   // 가계부 버튼 이벤트
   const btnExp = document.getElementById('btn-add-expense');
   const btnInc = document.getElementById('btn-add-income');
