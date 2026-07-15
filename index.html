@@ -1477,12 +1477,12 @@ function renderCatFilters(byCat) {
 function toggleCatFilter(cat) {
   if (activeCatFilters.has(cat)) activeCatFilters.delete(cat);
   else activeCatFilters.add(cat);
-  renderTxList();
-  renderCatFilters({}); // 필터 칩 리렌더
-  // 카테고리 byCat 재계산
-  const byCat = {};
-  transactions.filter(t=>t.type==='지출').forEach(t=>{ if(!byCat[t.category]) byCat[t.category]=0; byCat[t.category]+=t.amount; });
-  renderCatFilters(byCat);
+  applyFilters();
+}
+
+function clearCatFilters() {
+  activeCatFilters.clear();
+  applyFilters();
 }
 
 function renderTxList(filtered) {
