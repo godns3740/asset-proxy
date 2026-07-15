@@ -1373,8 +1373,7 @@ function switchTxView(view) {
   if (calBtn) { calBtn.style.background = view==='calendar'?'var(--accent)':'transparent'; calBtn.style.color = view==='calendar'?'#0e0f11':'var(--text-sub)'; }
   if (listView) listView.style.display = view==='list'?'block':'none';
   if (calView) calView.style.display = view==='calendar'?'block':'none';
-  if (view === 'calendar') renderCalendar();
-  if (view === 'list') renderTxList();
+  applyFilters();
 }
 
 // ── 메인 렌더 ──────────────────────────────────────────────────
