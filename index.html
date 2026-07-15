@@ -1521,6 +1521,16 @@ function renderTxList() {
   }).join('');
 }
 
+function getFilteredTx() {
+  const filterType = document.getElementById('b-filter-type')?.value || '';
+  const search = (document.getElementById('b-search')?.value || '').trim().toLowerCase();
+  let filtered = [...transactions];
+  if (filterType) filtered = filtered.filter(t => t.type === filterType);
+  if (activeCatFilters.size > 0) filtered = filtered.filter(t => activeCatFilters.has(t.category));
+  if (search) filtered = filtered.filter(t => (t.memo||'').toLowerCase().includes(search) || (t.category||'').toLowerCase().includes(search));
+  return filtered;
+}
+
 function renderCalendar(filtered) {
   const cal = document.getElementById('b-tx-calendar');
   if (!cal) return;
