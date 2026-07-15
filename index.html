@@ -1784,11 +1784,15 @@ function renderCalendar(filtered) {
       const hasData = inRange && (exp>0||inc>0);
       const isFiltered = activeCatFilters.size>0 || currentTypeFilter || (document.getElementById('b-search-input')?.value?.trim());
       const dimmed = inRange && isFiltered && !hasData;
-      html += '<div onclick="' + (hasData?'showDayDetail(''+ds+'')':'') + '" style="padding:3px 1px;border-radius:5px;cursor:' + (hasData?'pointer':'default') + ';background:' + (!inRange?'transparent':hasData?'var(--surface3)':'var(--surface2)') + ';border:1px solid ' + (!inRange?'transparent':hasData?'var(--border2)':'var(--border)') + ';opacity:' + (!inRange?0.2:dimmed?0.25:1) + ';min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">' +
+      const cell = document.createElement('div');
+      cell.style.cssText = 'padding:3px 1px;border-radius:5px;cursor:'+(hasData?'pointer':'default')+';background:'+(!inRange?'transparent':hasData?'var(--surface3)':'var(--surface2)')+';border:1px solid '+(!inRange?'transparent':hasData?'var(--border2)':'var(--border)')+';opacity:'+(!inRange?0.2:dimmed?0.25:1)+';min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;';
+      if (hasData) cell.onclick = () => showDayDetail(ds);
+      cell.innerHTML = '<div style="font-size:11px;color:'+(inRange&&!dimmed?'var(--text)':'var(--text-muted)')+';">'+d+'</div>'+(inRange&&inc>0?'<div style="font-size:9px;color:var(--accent);font-weight:600;">+'+(inc/10000).toFixed(0)+'만</div>':'')+(inRange&&exp>0?'<div style="font-size:9px;color:var(--red);">-'+(exp/10000).toFixed(0)+'만</div>':'');
+      html += cell.outerHTML;
         '<div style="font-size:11px;color:' + (inRange&&!dimmed?'var(--text)':'var(--text-muted)') + ';">' + d + '</div>' +
-        (inRange&&inc>0?'<div style="font-size:9px;color:var(--accent);font-weight:600;">+' + (inc/10000).toFixed(0) + '만</div>':'') +
-        (inRange&&exp>0?'<div style="font-size:9px;color:var(--red);">-' + (exp/10000).toFixed(0) + '만</div>':'') +
-        '</div>';
+
+
+
     }
     html += '</div></div>';
     curM = new Date(y, m+1, 1);
