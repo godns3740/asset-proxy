@@ -2424,8 +2424,7 @@ function getDiaLiquidity(asset, dateStr) {
 }
 
 function getDiaEarlyAmount(asset) {
-  // 중도해지시 손해 금액
-  if (asset.name.includes('청년도약')) return Math.round(asset.amount * 0.8);
+  // 중도해지시 손해 금액 (청년도약은 원금 보장)
   return null;
 }
 
