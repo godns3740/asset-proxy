@@ -2068,7 +2068,7 @@ async function handleRefresh() {
   if (st) st.textContent = `마지막 업데이트: ${new Date().toLocaleTimeString('ko-KR')}`;
 }
 
-document.getElementById('modal-bg').addEventListener('click', function(e) {
+const _mb = document.getElementById('modal-bg'); if (_mb) _mb.addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
