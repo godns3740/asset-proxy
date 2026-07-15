@@ -2047,6 +2047,100 @@ async function renderBudgetPage() {
   switchBudgetTab('overview');
 }
 
+function getFilteredTx() {
+  const filterType = document.getElementById('b-filter-type-sel')?.value || '';
+  const search = (document.getElementById('b-search-input')?.value || '').trim().toLowerCase();
+  let filtered = [...transactions];
+  if (filterType) filtered = filtered.filter(t => t.type === filterType);
+  if (activeCatFilters.size > 0) filtered = filtered.filter(t => activeCatFilters.has(t.category));
+  if (search) filtered = filtered.filter(t => (t.memo||'').toLowerCase().includes(search) || (t.category||'').toLowerCase().includes(search));
+  return filtered;
+}
+
+let pickerYear = new Date().getFullYear();
+let pickerMonth = new Date().getMonth();
+
+function initDatePicker(dateStr) {
+  const d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  pickerYear = d.getFullYear();
+  pickerMonth = d.getMonth();
+  updateDateDisplay(dateStr || new Date().toISOString().slice(0,10));
+}
+
+function updateDateDisplay(dateStr) {
+  const el = document.getElementById('t-date');
+  if (el) el.value = dateStr;
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  let label = dateStr === today ? '오늘 · ' + (d.getMonth()+1) + '/' + d.getDate()
+    : dateStr === yesterday ? '어제 · ' + (d.getMonth()+1) + '/' + d.getDate()
+    : d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+  const textEl = document.getElementById('t-date-text');
+  if (textEl) textEl.textContent = label;
+}
+
+function toggleDatePicker() {
+  const picker = document.getElementById('t-date-picker');
+  if (!picker) return;
+  if (picker.style.display === 'none') {
+    const curDate = document.getElementById('t-date')?.value || new Date().toISOString().slice(0,10);
+    const d = new Date(curDate + 'T00:00:00');
+    pickerYear = d.getFullYear(); pickerMonth = d.getMonth();
+    const label = document.getElementById('picker-month-label');
+    if (label) label.textContent = pickerYear + '년 ' + (pickerMonth+1) + '월';
+    renderPickerDays();
+    picker.style.display = 'block';
+  } else {
+    picker.style.display = 'none';
+  }
+}
+
+function changePickerMonth(dir) {
+  pickerMonth += dir;
+  if (pickerMonth > 11) { pickerMonth = 0; pickerYear++; }
+  if (pickerMonth < 0) { pickerMonth = 11; pickerYear--; }
+  const label = document.getElementById('picker-month-label');
+  if (label) label.textContent = pickerYear + '년 ' + (pickerMonth+1) + '월';
+  renderPickerDays();
+}
+
+function renderPickerDays() {
+  const container = document.getElementById('picker-days');
+  if (!container) return;
+  const today = new Date().toISOString().slice(0,10);
+  const selected = document.getElementById('t-date')?.value || '';
+  const daysInMonth = new Date(pickerYear, pickerMonth+1, 0).getDate();
+  const firstDay = new Date(pickerYear, pickerMonth, 1).getDay();
+  let html = '';
+  for (let i=0; i<firstDay; i++) html += '<div></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const ds = pickerYear + '-' + String(pickerMonth+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    const isSel = ds === selected, isToday = ds === today;
+    html += `<div onclick="pickDate('${ds}')" style="padding:6px 2px;border-radius:6px;cursor:pointer;font-size:13px;text-align:center;background:${isSel?'var(--accent)':isToday?'var(--accent-dim)':'transparent'};color:${isSel?'#0e0f11':isToday?'var(--accent)':'var(--text)'};font-weight:${isSel||isToday?'600':'400'};"
+      onmouseenter="if(!${isSel}) this.style.background='var(--surface2)'"
+      onmouseleave="this.style.background='${isSel?'var(--accent)':isToday?'var(--accent-dim)':'transparent'}'">${d}</div>`;
+  }
+  container.innerHTML = html;
+}
+
+function pickDate(dateStr) {
+  updateDateDisplay(dateStr);
+  const picker = document.getElementById('t-date-picker');
+  if (picker) picker.style.display = 'none';
+  renderPickerDays();
+}
+
+function selectToday() { pickDate(new Date().toISOString().slice(0,10)); }
+function selectYesterday() { pickDate(new Date(Date.now()-86400000).toISOString().slice(0,10)); }
+
+function selectPayment(btn, val) {
+  document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const el = document.getElementById('t-payment');
+  if (el) el.value = val;
+}
+
 function fmtNum(el) {
   const raw = el.value.replace(/[^0-9]/g, '');
   el.dataset.raw = raw;
