@@ -255,6 +255,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <div class="nav-item" data-page="simulator"><span class="icon">🔮</span> 시뮬레이터</div>
     <div class="nav-item" data-page="timeline"><span class="icon">📅</span> 타임라인</div>
     <div class="nav-item" data-page="budget"><span class="icon">💸</span> 가계부</div>
+    <div class="nav-item" data-page="home"><span class="icon">🏠</span> 내집마련</div>
   </div>
   <div class="nav-footer">
     <div class="updated" id="navUpdated">—</div>
@@ -502,6 +503,201 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
             <div id="b-fixed-list"></div>
           </div>
 
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 내집마련 -->
+  <div class="page" id="page-home">
+    <div class="page-header">
+      <h1>🏠 내집마련 시뮬레이터</h1>
+      <p>날짜 기준으로 우리 둘의 자산을 확인하고 집 매매 계획을 세워요</p>
+    </div>
+
+    <!-- 탭 -->
+    <div style="display:flex;gap:0;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:24px;width:fit-content;">
+      <button id="htab-assets" onclick="switchHomeTab('assets')" style="padding:8px 24px;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;background:var(--accent);color:#0e0f11;transition:all 0.15s;">1. 자산 선택</button>
+      <button id="htab-plan" onclick="switchHomeTab('plan')" style="padding:8px 24px;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;background:transparent;color:var(--text-muted);transition:all 0.15s;">2. 매매 계획</button>
+    </div>
+
+    <!-- 탭 1: 자산 선택 -->
+    <div id="home-tab-assets">
+      <!-- 날짜 선택 -->
+      <div class="box" style="margin-bottom:20px;">
+        <div class="box-head"><h2>📅 기준 날짜</h2></div>
+        <div class="box-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <input type="month" id="home-date" style="font-size:16px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:9px;font-family:inherit;outline:none;">
+          <span id="home-date-label" style="font-size:13px;color:var(--text-muted);"></span>
+          <button onclick="calcHomeAssets()" class="btn btn-primary" style="font-size:13px;">계산하기</button>
+        </div>
+      </div>
+
+      <!-- 자산 선택 영역 -->
+      <div class="g2" style="margin-bottom:20px;">
+        <!-- 규원 자산 -->
+        <div class="box">
+          <div class="box-head">
+            <h2>👩 규원</h2>
+            <span style="font-size:12px;color:var(--text-muted);">선택: <strong id="dia-selected-total" style="color:var(--accent);">0원</strong></span>
+          </div>
+          <div id="dia-asset-list" style="padding:8px 0;"></div>
+        </div>
+        <!-- 성재 자산 -->
+        <div class="box">
+          <div class="box-head">
+            <h2>👨 성재</h2>
+            <span style="font-size:12px;color:var(--text-muted);">선택: <strong id="sj-selected-total" style="color:var(--accent);">0원</strong></span>
+          </div>
+          <div id="sj-asset-list" style="padding:8px 0;"></div>
+        </div>
+      </div>
+
+      <!-- 합산 결과 -->
+      <div class="box" style="margin-bottom:20px;">
+        <div class="box-head"><h2>💰 선택한 자산 합계</h2></div>
+        <div class="box-body">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;">
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">👩 규원</div>
+              <div style="font-size:18px;font-weight:600;" id="home-dia-sum">0원</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">👨 성재</div>
+              <div style="font-size:18px;font-weight:600;" id="home-sj-sum">0원</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--accent-dim);border:1px solid var(--accent-glow);border-radius:10px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">합계</div>
+              <div style="font-size:20px;font-weight:700;color:var(--accent);" id="home-total-sum">0원</div>
+            </div>
+          </div>
+          <!-- 선택 항목 해지 경고 -->
+          <div id="home-penalty-warning" style="display:none;padding:10px 14px;background:rgba(251,113,113,0.1);border:1px solid var(--red);border-radius:8px;font-size:13px;color:var(--red);margin-bottom:12px;"></div>
+          <button onclick="applyAndGoToPlan()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:15px;font-weight:600;padding:12px;">
+            적용하고 매매 계획 보기 →
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 탭 2: 매매 계획 -->
+    <div id="home-tab-plan" style="display:none;">
+      <!-- 상단 요약 -->
+      <div class="box" style="margin-bottom:20px;border-color:var(--accent-glow);">
+        <div class="box-head"><h2>🏡 매매 가능 금액 요약</h2></div>
+        <div class="box-body">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+            <div style="padding:14px;background:var(--surface2);border-radius:10px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">우리 자금 (30%)</div>
+              <div style="font-size:16px;font-weight:600;color:var(--accent);" id="plan-our-money">—</div>
+            </div>
+            <div style="padding:14px;background:var(--surface2);border-radius:10px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">최대 대출 (70%)</div>
+              <div style="font-size:16px;font-weight:600;color:var(--blue);" id="plan-max-loan">—</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">삼성 대출 최대 5억</div>
+            </div>
+            <div style="padding:14px;background:var(--surface2);border-radius:10px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">매매 가능 집값</div>
+              <div style="font-size:16px;font-weight:600;" id="plan-house-price">—</div>
+            </div>
+            <div style="padding:14px;background:var(--surface2);border-radius:10px;">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">취득세 + 부대비용</div>
+              <div style="font-size:16px;font-weight:600;color:var(--red);" id="plan-tax">—</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;" id="plan-tax-detail"></div>
+            </div>
+          </div>
+          <!-- 집값 직접 조정 -->
+          <div style="background:var(--surface2);border-radius:10px;padding:14px;">
+            <div style="font-size:13px;color:var(--text-sub);margin-bottom:10px;">목표 집값 직접 설정</div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <input type="text" inputmode="numeric" id="plan-custom-price" placeholder="집값 입력 (예: 500,000,000)" oninput="fmtNum(this);recalcPlan()"
+                style="flex:1;background:var(--surface);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 14px;border-radius:9px;outline:none;min-width:200px;">
+              <div style="font-size:13px;color:var(--text-muted);">대출: <strong id="plan-actual-loan" style="color:var(--blue);">—</strong></div>
+              <div id="plan-loan-warning" style="font-size:12px;color:var(--red);display:none;">⚠️ 대출 한도 초과</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 월 생활비 계산 -->
+      <div class="box" style="margin-bottom:20px;">
+        <div class="box-head"><h2>📊 집 구매 후 월 생활비</h2></div>
+        <div class="box-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;">
+            <!-- 수입 -->
+            <div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:500;">💰 월 수입</div>
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">
+                  <span style="color:var(--text-sub);">👩 규원 월급</span><span style="font-weight:500;">3,500,000원</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">
+                  <span style="color:var(--text-sub);">👨 성재 월급</span><span style="font-weight:500;">4,000,000원</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:8px 0;color:var(--accent);">
+                  <span>합계</span><span>7,500,000원</span>
+                </div>
+              </div>
+            </div>
+            <!-- 고정지출 -->
+            <div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:500;">📌 월 고정지출</div>
+              <div id="plan-fixed-list" style="display:flex;flex-direction:column;gap:4px;"></div>
+            </div>
+          </div>
+          <!-- 결과 바 -->
+          <div style="background:var(--surface2);border-radius:10px;padding:14px;">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+              <div style="text-align:center;">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">대출 월 상환액</div>
+                <div style="font-size:16px;font-weight:600;color:var(--red);" id="plan-monthly-loan">—</div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:2px);">3년 거치 후 원리금균등</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">월 고정지출 합계</div>
+                <div style="font-size:16px;font-weight:600;color:var(--orange);" id="plan-monthly-fixed">—</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">월 가처분 소득</div>
+                <div style="font-size:20px;font-weight:700;" id="plan-disposable">—</div>
+              </div>
+            </div>
+            <!-- 바 그래프 -->
+            <div style="margin-bottom:6px;font-size:12px;color:var(--text-muted);">수입 대비 지출 비율</div>
+            <div style="height:12px;background:var(--surface3);border-radius:6px;overflow:hidden;display:flex;">
+              <div id="plan-bar-loan" style="height:100%;background:var(--red);transition:width 0.5s;width:0%;"></div>
+              <div id="plan-bar-fixed" style="height:100%;background:var(--orange);transition:width 0.5s;width:0%;"></div>
+              <div id="plan-bar-free" style="height:100%;background:var(--accent);transition:width 0.5s;width:0%;"></div>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--text-muted);">
+              <span>🔴 대출상환</span><span>🟠 고정지출</span><span>🟢 가처분</span>
+            </div>
+          </div>
+          <!-- 거치기간 안내 -->
+          <div style="margin-top:12px;padding:10px 14px;background:var(--accent-dim);border-radius:8px;font-size:12px;color:var(--text-sub);">
+            💡 <strong>3년 거치 기간</strong>에는 이자만 납부 → 월 <strong id="plan-interest-only">—</strong> / 거치 후 원리금균등 상환 → 월 <strong id="plan-monthly-loan2">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 지분 계산 -->
+      <div class="box">
+        <div class="box-head"><h2>⚖️ 기여금 & 지분 비율</h2></div>
+        <div class="box-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center;">
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">👩 규원</div>
+              <div style="font-size:20px;font-weight:700;color:var(--accent);" id="plan-dia-ratio">—%</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="plan-dia-contrib">—</div>
+            </div>
+            <div style="padding:14px;background:var(--surface2);border-radius:10px;text-align:center;">
+              <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">👨 성재</div>
+              <div style="font-size:20px;font-weight:700;color:var(--blue);" id="plan-sj-ratio">—%</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="plan-sj-contrib">—</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center;" id="plan-contrib-note"></div>
         </div>
       </div>
     </div>
@@ -939,7 +1135,7 @@ function closeNav() {
   document.getElementById('navOverlay').style.display = 'none';
   document.getElementById('navCloseBtn').style.display = 'none';
 }
-const PAGE_TITLES = {dashboard:'대시보드',assets:'자산 관리',simulator:'시뮬레이터',timeline:'타임라인',budget:'가계부'};
+const PAGE_TITLES = {dashboard:'대시보드',assets:'자산 관리',simulator:'시뮬레이터',timeline:'타임라인',budget:'가계부',home:'내집마련'};
 document.querySelectorAll('.nav-item').forEach(el => {
   el.addEventListener('click', () => {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -952,6 +1148,7 @@ document.querySelectorAll('.nav-item').forEach(el => {
     if (el.dataset.page === 'timeline') renderTimeline();
     if (el.dataset.page === 'assets') renderAssets();
     if (el.dataset.page === 'budget') renderBudgetPage();
+    if (el.dataset.page === 'home') renderHomePage();
   });
 });
 
@@ -1986,6 +2183,416 @@ async function renderBudgetPage(){
   renderBudget();
   switchBudgetTab('overview');
 }
+
+
+// ─── 내집마련 시뮬레이터 ───────────────────────────────────────
+let partnerAssets = [];
+let diaAssets = [];
+let homeSelectedDia = new Set();
+let homeSelectedSj = new Set();
+let homeAppliedTotal = 0;
+let homeAppliedDia = 0;
+let homeAppliedSj = 0;
+let homeAppliedPenaltyItems = [];
+
+const DIA_MONTHLY_SALARY = 3500000;
+const SJ_MONTHLY_SALARY = 4000000;
+const SAMSUNG_MAX_LOAN = 500000000;
+const SAMSUNG_RATE = 0.015; // 개인부담 1.5%
+const LOAN_DEFER_YEARS = 3;
+const LOAN_REPAY_YEARS = 10;
+
+// 성재 고정지출 (월 환산)
+const SJ_FIXED = [
+  { name: 'METLIFE 보험', amount: 1000000, linked_asset: 'METLIFE 보험' },
+  { name: '한화생명 보험', amount: 500000, linked_asset: '한화생명 보험' },
+  { name: '주택청약', amount: 150000, linked_asset: '주택청약' },
+  { name: '여행적금', amount: 300000, linked_asset: null },
+  { name: '관리비', amount: 200000, linked_asset: null },
+  { name: '쿠팡', amount: 7890, linked_asset: null },
+  { name: '통신비', amount: 54500, linked_asset: null },
+  { name: '인터넷', amount: 26400, linked_asset: null },
+  { name: '운전자보험', amount: 20200, linked_asset: null },
+  { name: '대출이자', amount: 120000, linked_asset: null },
+  { name: '비타민', amount: 99000, linked_asset: null },
+  { name: '자동차보험(월환산)', amount: 116667, linked_asset: null },
+  { name: '자동차세(월환산)', amount: 23333, linked_asset: null },
+  { name: '실비보험', amount: 100000, linked_asset: null },
+];
+
+async function loadHomeData() {
+  try {
+    const r = await fetch(PROXY_BASE_URL + '/api/partner-assets');
+    partnerAssets = await r.json();
+    if (!Array.isArray(partnerAssets)) partnerAssets = [];
+  } catch(e) { partnerAssets = []; }
+  // 규원 자산은 기존 assets에서
+  diaAssets = assets.filter(a => a.status !== '해지');
+}
+
+function getAssetValueAtDate(asset, dateStr) {
+  // 날짜 기준으로 자산 가치 계산
+  const targetDate = new Date(dateStr + '-01');
+  const now = new Date();
+  
+  if (asset.maturity_date) {
+    const maturity = new Date(asset.maturity_date);
+    if (targetDate >= maturity) {
+      // 만기 이후 → 정상 금액
+      return { amount: asset.amount, liquidity: '유동', matured: true };
+    }
+  }
+  return { amount: asset.amount, liquidity: asset.liquidity, matured: false };
+}
+
+function getDiaLiquidity(asset, dateStr) {
+  const target = new Date(dateStr + '-01');
+  if (asset.type === '퇴직연금') return '불가';
+  if (asset.type === '현금') return '유동';
+  if (asset.type === '국내주식' || asset.type === '해외주식') return '유동';
+  if (asset.type === '전세') {
+    if (asset.maturity) {
+      const mat = new Date(asset.maturity);
+      return target >= mat ? '유동' : '비유동';
+    }
+    return '비유동';
+  }
+  if (asset.type === '적금') {
+    if (asset.name.includes('청년도약')) {
+      if (asset.maturity) {
+        const mat = new Date(asset.maturity);
+        return target >= mat ? '유동' : '비유동';
+      }
+    }
+    return '비유동';
+  }
+  return '비유동';
+}
+
+function getDiaEarlyAmount(asset) {
+  // 중도해지시 손해 금액
+  if (asset.name.includes('청년도약')) return Math.round(asset.amount * 0.8);
+  return null;
+}
+
+function renderHomeAssets() {
+  const dateStr = document.getElementById('home-date').value;
+  if (!dateStr) return;
+
+  const target = new Date(dateStr + '-01');
+  const now = new Date();
+  const monthDiff = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
+  const label = monthDiff === 0 ? '현재 기준' : monthDiff > 0 ? monthDiff + '개월 후 기준' : Math.abs(monthDiff) + '개월 전 기준';
+  document.getElementById('home-date-label').textContent = label;
+
+  // 규원 자산 렌더
+  const diaList = document.getElementById('dia-asset-list');
+  const diaOrder = ['현금','국내주식','해외주식','전세','적금','퇴직연금','기타'];
+  const sortedDia = [...diaAssets].sort((a,b) => diaOrder.indexOf(a.type) - diaOrder.indexOf(b.type));
+  
+  diaList.innerHTML = sortedDia.map(asset => {
+    const liquidity = getDiaLiquidity(asset, dateStr);
+    const earlyAmt = getDiaEarlyAmount(asset);
+    const isPenalty = earlyAmt !== null && liquidity === '비유동';
+    const isImpossible = liquidity === '불가';
+    const isSelected = homeSelectedDia.has(asset.id);
+    const displayAmt = isSelected && isPenalty ? earlyAmt : asset.amount;
+    
+    const liquidityColor = liquidity === '유동' ? 'var(--accent)' : liquidity === '비유동' ? 'var(--orange)' : 'var(--text-muted)';
+    const liquidityBg = liquidity === '유동' ? 'rgba(74,222,128,0.15)' : liquidity === '비유동' ? 'rgba(251,146,60,0.15)' : 'var(--surface3)';
+
+    return `<div onclick="${isImpossible ? '' : `toggleDiaAsset(${asset.id})`}" style="
+      display:flex;align-items:center;gap:10px;padding:10px 16px;
+      cursor:${isImpossible?'not-allowed':'pointer'};
+      background:${isSelected?'var(--accent-dim)':'transparent'};
+      border-left:3px solid ${isSelected?'var(--accent)':'transparent'};
+      transition:all 0.15s;opacity:${isImpossible?0.4:1};">
+      <div style="width:18px;height:18px;border-radius:4px;border:2px solid ${isSelected?'var(--accent)':'var(--border2)'};background:${isSelected?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${isSelected?'<span style="color:#0e0f11;font-size:11px;font-weight:700;">✓</span>':''}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${asset.name}</div>
+        ${isPenalty&&isSelected?`<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 시 ${W(earlyAmt)} (원금 ${W(asset.amount)})</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:13px;font-weight:600;">${W(displayAmt)}</div>
+        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${liquidityBg};color:${liquidityColor};">${liquidity}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 성재 자산 렌더
+  const sjList = document.getElementById('sj-asset-list');
+  sjList.innerHTML = partnerAssets.map(asset => {
+    const { liquidity } = getAssetValueAtDate(asset, dateStr);
+    const isPenalty = asset.early_penalty && liquidity === '비유동';
+    const isImpossible = asset.liquidity === '불가';
+    const isSelected = homeSelectedSj.has(asset.id);
+    const displayAmt = isSelected && isPenalty ? asset.early_amount : asset.amount;
+    
+    const liquidityColor = liquidity === '유동' ? 'var(--accent)' : liquidity === '비유동' ? 'var(--orange)' : 'var(--text-muted)';
+    const liquidityBg = liquidity === '유동' ? 'rgba(74,222,128,0.15)' : liquidity === '비유동' ? 'rgba(251,146,60,0.15)' : 'var(--surface3)';
+
+    return `<div onclick="${isImpossible ? '' : `toggleSjAsset(${asset.id})`}" style="
+      display:flex;align-items:center;gap:10px;padding:10px 16px;
+      cursor:${isImpossible?'not-allowed':'pointer'};
+      background:${isSelected?'var(--accent-dim)':'transparent'};
+      border-left:3px solid ${isSelected?'var(--accent)':'transparent'};
+      transition:all 0.15s;opacity:${isImpossible?0.4:1};">
+      <div style="width:18px;height:18px;border-radius:4px;border:2px solid ${isSelected?'var(--accent)':'var(--border2)'};background:${isSelected?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${isSelected?'<span style="color:#0e0f11;font-size:11px;font-weight:700;">✓</span>':''}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;">${asset.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${asset.memo||''}</div>
+        ${isPenalty&&isSelected?`<div style="font-size:10px;color:var(--red);">⚠️ 중도해지 시 ${W(asset.early_amount)}원 (원금 ${W(asset.amount)})</div>`:''}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:13px;font-weight:600;">${W(displayAmt)}</div>
+        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${liquidityBg};color:${liquidityColor};">${liquidity}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateHomeTotal();
+}
+
+function toggleDiaAsset(id) {
+  if (homeSelectedDia.has(id)) homeSelectedDia.delete(id);
+  else homeSelectedDia.add(id);
+  renderHomeAssets();
+}
+
+function toggleSjAsset(id) {
+  if (homeSelectedSj.has(id)) homeSelectedSj.delete(id);
+  else homeSelectedSj.add(id);
+  renderHomeAssets();
+}
+
+function updateHomeTotal() {
+  const dateStr = document.getElementById('home-date').value;
+  let diaSum = 0, sjSum = 0;
+  const penaltyItems = [];
+
+  diaAssets.forEach(a => {
+    if (!homeSelectedDia.has(a.id)) return;
+    const liquidity = getDiaLiquidity(a, dateStr);
+    const earlyAmt = getDiaEarlyAmount(a);
+    if (earlyAmt !== null && liquidity === '비유동') {
+      diaSum += earlyAmt;
+      penaltyItems.push({ name: a.name, loss: a.amount - earlyAmt });
+    } else {
+      diaSum += a.amount;
+    }
+  });
+
+  partnerAssets.forEach(a => {
+    if (!homeSelectedSj.has(a.id)) return;
+    const { liquidity } = getAssetValueAtDate(a, dateStr);
+    if (a.early_penalty && liquidity === '비유동' && a.early_amount) {
+      sjSum += a.early_amount;
+      penaltyItems.push({ name: a.name, loss: a.amount - a.early_amount });
+    } else {
+      sjSum += a.amount;
+    }
+  });
+
+  const total = diaSum + sjSum;
+  document.getElementById('home-dia-sum').textContent = W(diaSum);
+  document.getElementById('home-sj-sum').textContent = W(sjSum);
+  document.getElementById('home-total-sum').textContent = W(total);
+  document.getElementById('dia-selected-total').textContent = W(diaSum);
+  document.getElementById('sj-selected-total').textContent = W(sjSum);
+
+  // 손해 경고
+  const warn = document.getElementById('home-penalty-warning');
+  if (penaltyItems.length > 0) {
+    warn.style.display = 'block';
+    warn.innerHTML = '⚠️ 중도해지 손해 항목: ' + penaltyItems.map(p => `${p.name} (-${W(p.loss)})`).join(', ');
+  } else {
+    warn.style.display = 'none';
+  }
+
+  homeAppliedDia = diaSum;
+  homeAppliedSj = sjSum;
+  homeAppliedTotal = total;
+  homeAppliedPenaltyItems = penaltyItems;
+}
+
+function calcHomeAssets() {
+  renderHomeAssets();
+}
+
+function applyAndGoToPlan() {
+  switchHomeTab('plan');
+  renderPlan();
+}
+
+// ── 탭 2: 매매 계획 ──────────────────────────────────────────────
+function renderPlan() {
+  const ourMoney = homeAppliedTotal;
+  // 우리 자금이 30%일 때 집값
+  const housePriceFrom30 = Math.floor(ourMoney / 0.3);
+  // 삼성 대출 70% 한도 & 5억 한도
+  const maxLoanFrom70 = Math.floor(housePriceFrom30 * 0.7);
+  const maxLoan = Math.min(maxLoanFrom70, SAMSUNG_MAX_LOAN);
+  const housePrice = ourMoney + maxLoan;
+
+  // 취득세 계산 (6억 이하 1%, 6~9억 2%, 9억 초과 3%)
+  let taxRate = 0.01;
+  if (housePrice > 900000000) taxRate = 0.03;
+  else if (housePrice > 600000000) taxRate = 0.02;
+  const tax = Math.round(housePrice * taxRate);
+  const regFee = Math.round(housePrice * 0.004); // 등록세
+  const agentFee = Math.round(housePrice * 0.005); // 중개수수료 최대
+  const totalExtra = tax + regFee + agentFee;
+
+  document.getElementById('plan-our-money').textContent = W(ourMoney);
+  document.getElementById('plan-max-loan').textContent = W(maxLoan);
+  document.getElementById('plan-house-price').textContent = W(housePrice);
+  document.getElementById('plan-tax').textContent = W(totalExtra);
+  document.getElementById('plan-tax-detail').textContent = `취득세 ${W(tax)} + 등록비 ${W(regFee)} + 중개 ${W(agentFee)}`;
+
+  // 집값 입력창 초기값
+  const priceInput = document.getElementById('plan-custom-price');
+  if (priceInput && !priceInput.dataset.raw) {
+    priceInput.value = housePrice.toLocaleString('ko-KR');
+    priceInput.dataset.raw = housePrice;
+  }
+
+  recalcPlan();
+
+  // 지분 비율
+  if (ourMoney > 0) {
+    const diaRatio = Math.round(homeAppliedDia / ourMoney * 100);
+    const sjRatio = 100 - diaRatio;
+    document.getElementById('plan-dia-ratio').textContent = diaRatio + '%';
+    document.getElementById('plan-sj-ratio').textContent = sjRatio + '%';
+    document.getElementById('plan-dia-contrib').textContent = W(homeAppliedDia);
+    document.getElementById('plan-sj-contrib').textContent = W(homeAppliedSj);
+    document.getElementById('plan-contrib-note').textContent = '대출 상환 기여도에 따라 최종 지분이 달라질 수 있어요';
+  }
+
+  // 고정지출 목록 (선택한 자산 해지한 것 제외)
+  renderPlanFixedList();
+}
+
+function recalcPlan() {
+  const raw = document.getElementById('plan-custom-price')?.dataset.raw;
+  if (!raw) return;
+  const housePrice = parseInt(raw) || 0;
+  const loan = Math.min(Math.floor(housePrice * 0.7), SAMSUNG_MAX_LOAN);
+  const ourNeed = housePrice - loan;
+
+  document.getElementById('plan-actual-loan').textContent = W(loan);
+  const warn = document.getElementById('plan-loan-warning');
+  if (loan >= SAMSUNG_MAX_LOAN) {
+    warn.style.display = 'block';
+    warn.textContent = '⚠️ 삼성 대출 최대 5억 적용됨';
+  } else { warn.style.display = 'none'; }
+
+  // 이자만 납부 (거치 3년): 월이자 = 대출 × 1.5% / 12
+  const monthlyInterestOnly = Math.round(loan * SAMSUNG_RATE / 12);
+  // 원리금균등 (10년): PMT 계산
+  const r = SAMSUNG_RATE / 12;
+  const n = LOAN_REPAY_YEARS * 12;
+  const pmt = r > 0 ? Math.round(loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1)) : Math.round(loan/n);
+
+  document.getElementById('plan-interest-only').textContent = W(monthlyInterestOnly) + '/월';
+  document.getElementById('plan-monthly-loan').textContent = W(pmt) + '/월';
+  document.getElementById('plan-monthly-loan2').textContent = W(pmt) + '/월';
+
+  // 고정지출 합계
+  const fixedTotal = calcPlanFixed();
+  document.getElementById('plan-monthly-fixed').textContent = W(fixedTotal);
+
+  const totalIncome = DIA_MONTHLY_SALARY + SJ_MONTHLY_SALARY;
+  const disposable = totalIncome - pmt - fixedTotal;
+  const dispEl = document.getElementById('plan-disposable');
+  if (dispEl) {
+    dispEl.textContent = W(disposable);
+    dispEl.style.color = disposable >= 0 ? 'var(--accent)' : 'var(--red)';
+  }
+
+  // 바 그래프
+  const loanPct = Math.min(pmt/totalIncome*100, 100);
+  const fixedPct = Math.min(fixedTotal/totalIncome*100, 100-loanPct);
+  const freePct = Math.max(0, 100-loanPct-fixedPct);
+  const lb = document.getElementById('plan-bar-loan'); if(lb) lb.style.width=loanPct+'%';
+  const fb = document.getElementById('plan-bar-fixed'); if(fb) fb.style.width=fixedPct+'%';
+  const gb = document.getElementById('plan-bar-free'); if(gb) gb.style.width=freePct+'%';
+}
+
+function calcPlanFixed() {
+  // 선택해서 해지한 자산과 연결된 고정지출 제외
+  const selectedSjAssetNames = new Set(
+    partnerAssets.filter(a => homeSelectedSj.has(a.id)).map(a => a.name)
+  );
+  const selectedDiaAssetNames = new Set(
+    diaAssets.filter(a => homeSelectedDia.has(a.id)).map(a => a.name)
+  );
+
+  let total = 0;
+  // 규원 고정지출 (fixedExpenses에서)
+  fixedExpenses.forEach(f => {
+    // 청년도약, 청약 등 선택한 경우 제외
+    const isLinked = selectedDiaAssetNames.has(f.name) ||
+      (f.name.includes('청약') && [...selectedDiaAssetNames].some(n=>n.includes('청약'))) ||
+      (f.name.includes('청년도약') && [...selectedDiaAssetNames].some(n=>n.includes('청년도약')));
+    if (!isLinked) total += f.amount;
+  });
+  // 성재 고정지출
+  SJ_FIXED.forEach(f => {
+    const isLinked = f.linked_asset && selectedSjAssetNames.has(f.linked_asset);
+    if (!isLinked) total += f.amount;
+  });
+  return total;
+}
+
+function renderPlanFixedList() {
+  const list = document.getElementById('plan-fixed-list');
+  if (!list) return;
+  const selectedSjAssetNames = new Set(partnerAssets.filter(a=>homeSelectedSj.has(a.id)).map(a=>a.name));
+  const selectedDiaAssetNames = new Set(diaAssets.filter(a=>homeSelectedDia.has(a.id)).map(a=>a.name));
+
+  let html = '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">규원</div>';
+  fixedExpenses.forEach(f => {
+    const isLinked = selectedDiaAssetNames.has(f.name) ||
+      (f.name.includes('청약') && [...selectedDiaAssetNames].some(n=>n.includes('청약'))) ||
+      (f.name.includes('청년도약') && [...selectedDiaAssetNames].some(n=>n.includes('청년도약')));
+    html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;${isLinked?'opacity:0.35;text-decoration:line-through;':''}">
+      <span style="color:var(--text-sub);">${f.name}${isLinked?' (해지)':''}</span>
+      <span>${W(f.amount)}</span></div>`;
+  });
+  html += '<div style="font-size:11px;color:var(--text-muted);margin-top:8px;margin-bottom:4px;">성재</div>';
+  SJ_FIXED.forEach(f => {
+    const isLinked = f.linked_asset && selectedSjAssetNames.has(f.linked_asset);
+    html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;${isLinked?'opacity:0.35;text-decoration:line-through;':''}">
+      <span style="color:var(--text-sub);">${f.name}${isLinked?' (해지)':''}</span>
+      <span>${W(f.amount)}</span></div>`;
+  });
+  const total = calcPlanFixed();
+  html += `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:8px 0 0;border-top:1px solid var(--border);margin-top:6px;color:var(--orange);">
+    <span>합계</span><span>${W(total)}</span></div>`;
+  list.innerHTML = html;
+}
+
+function switchHomeTab(tab) {
+  document.getElementById('home-tab-assets').style.display = tab==='assets'?'block':'none';
+  document.getElementById('home-tab-plan').style.display = tab==='plan'?'block':'none';
+  const ab = document.getElementById('htab-assets'), pb = document.getElementById('htab-plan');
+  if(ab){ab.style.background=tab==='assets'?'var(--accent)':'transparent';ab.style.color=tab==='assets'?'#0e0f11':'var(--text-muted)';}
+  if(pb){pb.style.background=tab==='plan'?'var(--accent)':'transparent';pb.style.color=tab==='plan'?'#0e0f11':'var(--text-muted)';}
+}
+
+async function renderHomePage() {
+  await loadHomeData();
+  const now = new Date();
+  const defaultDate = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  document.getElementById('home-date').value = defaultDate;
+  renderHomeAssets();
+}
+
 
 // ─── INIT ─────────────────────────────────────────────────────
 async function handleRefresh() {
