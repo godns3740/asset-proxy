@@ -1765,7 +1765,8 @@ function renderCalendar(filtered) {
   filtered.filter(t=>t.type==='수입').forEach(t=>{ byDateInc[t.date]=(byDateInc[t.date]||0)+t.amount; });
 
   const days = ['일','월','화','수','목','금','토'];
-  let html = '';
+  cal.innerHTML = '';
+
   let curM = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
   while (curM <= endDate) {
     const y = curM.getFullYear(), m = curM.getMonth();
@@ -1773,10 +1774,29 @@ function renderCalendar(filtered) {
     const isFirst = y===startDate.getFullYear() && m===startDate.getMonth();
     const dayStart = isFirst ? startDate.getDate() : 1;
     const startDOW = new Date(y, m, dayStart).getDay();
-    html += '<div style="margin-bottom:18px;"><div style="font-size:12px;font-weight:500;color:var(--text-sub);margin-bottom:8px;">' + y + '년 ' + (m+1) + '월</div>';
-    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">';
-    days.forEach(d => { html += '<div style="font-size:10px;color:var(--text-muted);padding:3px 0;">' + d + '</div>'; });
-    for (let i=0;i<startDOW;i++) html += '<div></div>';
+
+    const section = document.createElement('div');
+    section.style.marginBottom = '18px';
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:12px;font-weight:500;color:var(--text-sub);margin-bottom:8px;';
+    label.textContent = y + '년 ' + (m+1) + '월';
+    section.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;';
+
+    days.forEach(d => {
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'font-size:10px;color:var(--text-muted);padding:3px 0;';
+      hdr.textContent = d;
+      grid.appendChild(hdr);
+    });
+
+    for (let i=0; i<startDOW; i++) {
+      grid.appendChild(document.createElement('div'));
+    }
+
     for (let d=dayStart; d<=daysInMonth; d++) {
       const ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
       const inRange = ds >= start && ds <= end;
@@ -1784,20 +1804,38 @@ function renderCalendar(filtered) {
       const hasData = inRange && (exp>0||inc>0);
       const isFiltered = activeCatFilters.size>0 || currentTypeFilter || (document.getElementById('b-search-input')?.value?.trim());
       const dimmed = inRange && isFiltered && !hasData;
+
       const cell = document.createElement('div');
-      cell.style.cssText = 'padding:3px 1px;border-radius:5px;cursor:'+(hasData?'pointer':'default')+';background:'+(!inRange?'transparent':hasData?'var(--surface3)':'var(--surface2)')+';border:1px solid '+(!inRange?'transparent':hasData?'var(--border2)':'var(--border)')+';opacity:'+(!inRange?0.2:dimmed?0.25:1)+';min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;';
-      if (hasData) cell.onclick = () => showDayDetail(ds);
-      cell.innerHTML = '<div style="font-size:11px;color:'+(inRange&&!dimmed?'var(--text)':'var(--text-muted)')+';">'+d+'</div>'+(inRange&&inc>0?'<div style="font-size:9px;color:var(--accent);font-weight:600;">+'+(inc/10000).toFixed(0)+'만</div>':'')+(inRange&&exp>0?'<div style="font-size:9px;color:var(--red);">-'+(exp/10000).toFixed(0)+'만</div>':'');
-      html += cell.outerHTML;
-        '<div style="font-size:11px;color:' + (inRange&&!dimmed?'var(--text)':'var(--text-muted)') + ';">' + d + '</div>' +
+      cell.style.cssText = 'padding:3px 1px;border-radius:5px;cursor:'+(hasData?'pointer':'default')+
+        ';background:'+(!inRange?'transparent':hasData?'var(--surface3)':'var(--surface2)')+
+        ';border:1px solid '+(!inRange?'transparent':hasData?'var(--border2)':'var(--border)')+
+        ';opacity:'+(!inRange?0.2:dimmed?0.25:1)+
+        ';min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;';
+      if (hasData) cell.onclick = (function(date){ return function(){ showDayDetail(date); }; })(ds);
 
+      const dayNum = document.createElement('div');
+      dayNum.style.cssText = 'font-size:11px;color:'+(inRange&&!dimmed?'var(--text)':'var(--text-muted)')+';';
+      dayNum.textContent = d;
+      cell.appendChild(dayNum);
 
-
+      if (inRange && inc > 0) {
+        const incDiv = document.createElement('div');
+        incDiv.style.cssText = 'font-size:9px;color:var(--accent);font-weight:600;';
+        incDiv.textContent = '+' + (inc/10000).toFixed(0) + '만';
+        cell.appendChild(incDiv);
+      }
+      if (inRange && exp > 0) {
+        const expDiv = document.createElement('div');
+        expDiv.style.cssText = 'font-size:9px;color:var(--red);';
+        expDiv.textContent = '-' + (exp/10000).toFixed(0) + '만';
+        cell.appendChild(expDiv);
+      }
+      grid.appendChild(cell);
     }
-    html += '</div></div>';
+    section.appendChild(grid);
+    cal.appendChild(section);
     curM = new Date(y, m+1, 1);
   }
-  cal.innerHTML = html;
 }
 
 function showDayDetail(dateStr) {
