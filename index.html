@@ -577,7 +577,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
         <!-- 날짜 -->
         <div class="form-group">
           <label>날짜</label>
-          <input type="date" id="t-date">
+          <input type="date" id="t-date" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;width:100%;cursor:pointer;appearance:none;-webkit-appearance:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'">
         </div>
         <!-- 결제수단 -->
         <div class="form-group">
@@ -601,7 +601,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
         <label>카테고리</label>
         <input type="text" id="t-cat-input" placeholder="카테고리 검색 또는 입력..." autocomplete="off"
           style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;border-radius:9px;outline:none;"
-          oninput="filterCatSuggestions()" onfocus="showCatSuggestions()">
+          oninput="filterCatSuggestions()" onfocus="showCatSuggestions()" onclick="showCatSuggestions()">
         <input type="hidden" id="t-category" value="">
         <!-- 선택된 카테고리 칩 -->
         <div id="t-cat-selected" style="margin-top:8px;display:none;">
@@ -623,7 +623,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 
       <div class="modal-actions">
         <button class="btn btn-ghost" id="btn-tx-cancel">취소</button>
-        <button class="btn btn-primary" id="btn-tx-save" style="min-width:80px;">저장</button>
+        <button class="btn btn-primary" id="btn-tx-save" style="min-width:80px;justify-content:center;">저장</button>
       </div>
     </div>
   </div>
@@ -1370,18 +1370,21 @@ async function loadCategories() {
 function filterCatSuggestions() {
   const input = document.getElementById('t-cat-input');
   const type = document.getElementById('t-type')?.value || '지출';
-  const query = input?.value.toLowerCase() || '';
-  const filtered = categories.filter(c => 
-    (c.type === type || type === '') && 
-    c.name.toLowerCase().includes(query)
-  );
+  const query = (input?.value || '').toLowerCase();
+  const filtered = query
+    ? categories.filter(c => c.type === type && c.name.toLowerCase().includes(query))
+    : categories.filter(c => c.type === type);
   renderCatDropdown(filtered, query);
 }
 
 function showCatSuggestions() {
   const type = document.getElementById('t-type')?.value || '지출';
-  const filtered = categories.filter(c => c.type === type);
-  renderCatDropdown(filtered, '');
+  const input = document.getElementById('t-cat-input');
+  const query = (input?.value || '').toLowerCase();
+  const filtered = query 
+    ? categories.filter(c => c.type === type && c.name.toLowerCase().includes(query))
+    : categories.filter(c => c.type === type);
+  renderCatDropdown(filtered, query);
 }
 
 function renderCatDropdown(cats, query) {
