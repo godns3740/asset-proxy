@@ -2723,12 +2723,7 @@ function calcPlanFixed() {
 }
 
 function onSliderChange(val) {
-  const price = parseInt(val);
-  const label = document.getElementById('slider-price-label');
-  if (label) label.textContent = (price/100000000).toFixed(1) + '억원';
-  updateSliderCalc(price);
-  // 월생활비도 슬라이더 기준으로 업데이트
-  updateMonthlyCalc(price);
+  updateSliderCalc(parseInt(val));
 }
 
 function updateSliderCalc(housePrice) {
@@ -2919,8 +2914,20 @@ function recalcWithCosts() {
   // 슬라이더도 업데이트
   const slider = document.getElementById('plan-price-slider');
   if (slider) {
-    updateSliderCalc(parseInt(slider.value));
-    updateMonthlyCalc(parseInt(slider.value));
+    const sv = parseInt(slider.value);
+    const ourM = getEffectiveMoney();
+    const need = Math.round(sv*0.3);
+    const loan = Math.min(Math.round(sv*0.7), SAMSUNG_MAX_LOAN);
+    const diff = ourM - need;
+    const { pmt } = calcLoanPayment(loan);
+    const set2 = (id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set2('cmp-house', W(sv));
+    set2('cmp-need', W(need));
+    const diffEl2 = document.getElementById('cmp-need-diff');
+    if(diffEl2){diffEl2.textContent=diff>=0?'+'+W(diff)+' 여유':W(Math.abs(diff))+' 부족';diffEl2.style.color=diff>=0?'var(--accent)':'var(--red)';}
+    set2('cmp-loan', W(loan));
+    set2('cmp-monthly', W(pmt)+'/월');
+    updateMonthlyCalc(sv);
   }
 }
 
