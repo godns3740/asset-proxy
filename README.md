@@ -30,6 +30,7 @@ Vercel 대시보드 → 프로젝트 → Settings → Environment Variables 에 
 | `SUPABASE_KEY` | Supabase service_role 키 (서버 전용, 절대 공개 금지) |
 | `KIS_APP_KEY` | 한국투자증권 Open API App Key |
 | `KIS_APP_SECRET` | 한국투자증권 Open API App Secret |
+| `APP_TOKEN` | 가계부 비밀번호. 모든 API 요청에 `x-app-token` 헤더로 필요하며, 웹 앱은 처음 접속할 때 한 번 물어봅니다 |
 
 CLI로 추가: `vercel env add SUPABASE_KEY production`
 

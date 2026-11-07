@@ -1,3 +1,4 @@
+import { requireAuth } from './_auth.js';
 const KIS_APP_KEY = process.env.KIS_APP_KEY;
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET;
 const KIS_BASE = 'https://openapi.koreainvestment.com:9443';
@@ -71,8 +72,9 @@ async function getUSPrice(token, sym) {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-app-token');
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!requireAuth(req, res)) return;
 
   const { symbols } = req.query;
   if (!symbols) return res.status(400).json({ error: 'symbols required' });
