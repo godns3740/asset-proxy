@@ -938,6 +938,38 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 // ▼ Vercel 배포 후 이 URL을 바꿔주세요
 const PROXY_BASE_URL = 'https://asset-proxy-uhid.vercel.app';
 
+// ─── API 비밀번호 ────────────────────────────────────────────
+// 서버(API)는 Vercel 환경변수 APP_TOKEN 과 같은 비밀번호가 있어야 응답합니다.
+// 처음 한 번만 입력하면 이 브라우저에 저장되고, 틀리면 다시 물어봅니다.
+const APP_TOKEN_KEY = 'gw_app_token';
+let appToken = null;
+let authAlertShown = false;
+function getAppToken() {
+  if (appToken) return appToken;
+  try { appToken = localStorage.getItem(APP_TOKEN_KEY); } catch (e) {}
+  if (!appToken) {
+    appToken = (prompt('가계부 비밀번호를 입력하세요') || '').trim();
+    if (appToken) { try { localStorage.setItem(APP_TOKEN_KEY, appToken); } catch (e) {} }
+  }
+  return appToken;
+}
+const _nativeFetch = window.fetch.bind(window);
+window.fetch = async (url, opts = {}) => {
+  if (typeof url !== 'string' || !url.startsWith(PROXY_BASE_URL)) return _nativeFetch(url, opts);
+  const headers = new Headers(opts.headers || {});
+  headers.set('x-app-token', getAppToken() || '');
+  const r = await _nativeFetch(url, { ...opts, headers });
+  if (r.status === 401) {
+    appToken = null;
+    try { localStorage.removeItem(APP_TOKEN_KEY); } catch (e) {}
+    if (!authAlertShown) {
+      authAlertShown = true;
+      alert('비밀번호가 맞지 않아요. 새로고침해서 다시 입력해 주세요.');
+    }
+  }
+  return r;
+};
+
 // 종목별 야후파이낸스 티커 매핑
 const STOCK_TICKERS = {
   '삼성전자':     '005930.KS',

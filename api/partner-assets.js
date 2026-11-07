@@ -1,3 +1,4 @@
+import { requireAuth } from './_auth.js';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const headers = {
@@ -10,8 +11,9 @@ const headers = {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-app-token');
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!requireAuth(req, res)) return;
   const base = `${SUPABASE_URL}/rest/v1/partner_assets`;
   try {
     if (req.method === 'GET') {
