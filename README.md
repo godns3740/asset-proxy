@@ -20,6 +20,19 @@ vercel
 - 질문들에 기본값(엔터)으로 답하면 됩니다
 - 마지막에 배포 URL이 나와요: `https://asset-proxy-xxx.vercel.app`
 
+### 3-1. 환경변수 설정 (필수)
+API 키는 코드에 넣지 않고 Vercel 환경변수로 관리합니다.
+Vercel 대시보드 → 프로젝트 → Settings → Environment Variables 에 아래 값을 추가한 뒤 재배포하세요.
+
+| 이름 | 설명 |
+|---|---|
+| `SUPABASE_URL` | Supabase 프로젝트 URL (`https://xxxx.supabase.co`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role 키 (서버 전용, 절대 공개 금지) |
+| `KIS_APP_KEY` | 한국투자증권 Open API App Key |
+| `KIS_APP_SECRET` | 한국투자증권 Open API App Secret |
+
+CLI로 추가: `vercel env add SUPABASE_SERVICE_ROLE_KEY production`
+
 ### 4. HTML 파일 업데이트
 asset_manager_web.html 상단의 PROXY_BASE_URL을 배포된 URL로 변경:
 ```js

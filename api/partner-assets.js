@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'https://warnzdrbovqmegwekicn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indhcm56ZHJib3ZxbWVnd2VraWNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MjQ2OTgzNCwiZXhwIjoyMDk4MDQ1ODM0fQ.LbcTCS-irxJCIrqGdM2vE8AMG7ZJS1IaeUCSR9BRyD8';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const headers = {
   'apikey': SUPABASE_KEY,
   'Authorization': `Bearer ${SUPABASE_KEY}`,
