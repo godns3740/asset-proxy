@@ -1,5 +1,5 @@
-const KIS_APP_KEY = 'PS18OErVVqfxlL31KTWGnfozZ708UMTLDb4s';
-const KIS_APP_SECRET = '3yrL+NZrHrZQ8NvCfLJnYK+IqJyq8pu7CP7TPVq25toHZ7nfAIfeK6yc72yuorXVLdvpRFFrx7EtBxMfcySvrzZD4v9BAgYyWxowfC5sUJ6prc0N0lpA3V2OlKllrBKGTbHIQzDzgJLJcPgTqtQkSrePjr+BTHRRJ3xwAM5C4lCFr4CeDbE=';
+const KIS_APP_KEY = process.env.KIS_APP_KEY;
+const KIS_APP_SECRET = process.env.KIS_APP_SECRET;
 const KIS_BASE = 'https://openapi.koreainvestment.com:9443';
 
 let cachedToken = null;
