@@ -13,6 +13,14 @@ const headers = () => ({
   'Prefer': 'return=representation',
 });
 const won = n => n.toLocaleString('ko-KR') + '원';
+const norm = s => String(s || '').toLowerCase().replace(/[\s()（）\[\]·._-]/g, '');
+function matchFixed(merchant, list) {
+  const m = norm(merchant);
+  return list.find(f => {
+    const n = norm(f.name);
+    return f.is_active !== false && n.length >= 2 && (m.includes(n) || (m.length >= 2 && n.includes(m)));
+  }) || null;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -29,12 +37,19 @@ export default async function handler(req, res) {
 
   const base = `${SUPABASE_URL}/rest/v1`;
   try {
-    const cr = await fetch(`${base}/categories?select=name,type`, { headers: headers() });
+    const [cr, fr] = await Promise.all([
+      fetch(`${base}/categories?select=name,type`, { headers: headers() }),
+      fetch(`${base}/fixed_expenses?select=name,category,is_active`, { headers: headers() }),
+    ]);
     const cats = await cr.json();
+    const fixedList = await fr.json().catch(() => []);
     const names = Array.isArray(cats) ? cats.filter(c => c.type === p.type).map(c => c.name) : [];
-    const category = pickCategory(p.merchant, p.type, names);
+    // 고정지출 목록의 이름과 겹치는 출금이면 고정지출로 표시 (변동지출 합계에서 빠짐)
+    const fixedHit = p.type === '지출' ? matchFixed(p.merchant, Array.isArray(fixedList) ? fixedList : []) : null;
+    let category = pickCategory(p.merchant, p.type, names);
+    if (fixedHit && fixedHit.category && names.includes(fixedHit.category)) category = fixedHit.category;
     const memo = p.time ? `${p.merchant} · ${p.time}` : p.merchant;
-    const tx = { date: p.date, type: p.type, category, payment: p.payment, memo, amount: p.amount, is_fixed: false };
+    const tx = { date: p.date, type: p.type, category, payment: p.payment, memo, amount: p.amount, is_fixed: !!fixedHit };
 
     if (req.query?.dryRun) return res.status(200).json({ ok: true, dryRun: true, parsed: p, transaction: tx });
 
@@ -67,7 +82,7 @@ export default async function handler(req, res) {
     const saved = await ir.json();
     if (!ir.ok) return res.status(502).json({ ok: false, message: `저장 실패: ${saved?.message || ir.status}`, detail: saved });
     const sign = p.type === '수입' ? '+' : '-';
-    return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${category} ${sign}${won(p.amount)} (${p.merchant})` });
+    return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${tx.is_fixed ? '고정 ' : ''}${category} ${sign}${won(p.amount)} (${p.merchant})` });
   } catch (e) {
     return res.status(500).json({ ok: false, message: `서버 오류: ${e.message}` });
   }
