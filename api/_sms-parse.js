@@ -50,7 +50,18 @@ export function parseSms(text, now) {
   const type = kind === '입금' && !isCancel ? '수입' : '지출';
   const payment = isCard ? '체크카드' : '계좌이체';
 
-  return { ok: true, kind, isCancel, type, amount, date, time, merchant, payment };
+  // 내 계좌끼리 이체: 상대방 이름이 문자 위쪽의 가려진 예금주 이름(예: 박*원)과 맞으면 건너뜁니다.
+  const holderLine = lines.find(l => /^\S*\*\S*\(\d{3,4}\)$/.test(l));
+  const holderMask = holderLine ? holderLine.replace(/\(\d{3,4}\)$/, '') : null;
+  const counterparty = merchant.replace(/^[^(]*\((.+)\)$/, '$1').trim();
+  const isSelfTransfer = !isCard && !!holderMask && isMaskMatch(holderMask, counterparty);
+
+  return { ok: true, kind, isCancel, type, amount, date, time, merchant, payment, isSelfTransfer };
+}
+
+function isMaskMatch(mask, name) {
+  if (!mask || !name || mask.length !== name.length) return false;
+  return [...mask].every((c, i) => c === '*' || c === name[i]);
 }
 
 // 가맹점/상대방 이름으로 카테고리를 고릅니다. 실제 카테고리 목록에 있는 이름만 씁니다.

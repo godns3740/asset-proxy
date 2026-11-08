@@ -40,6 +40,11 @@ export default async function handler(req, res) {
 
     const q = s => encodeURIComponent(s);
 
+    // 내 계좌끼리 옮긴 돈은 수입/지출이 아니므로 기록하지 않습니다.
+    if (p.isSelfTransfer) {
+      return res.status(200).json({ ok: true, ignored: true, message: `내 계좌 이체라 기록 안 함: ${p.merchant} ${won(p.amount)}` });
+    }
+
     // 결제 취소: 같은 가맹점·금액의 최근 지출을 지웁니다.
     if (p.isCancel) {
       const fr = await fetch(`${base}/transactions?type=eq.${q('지출')}&amount=eq.${p.amount}&memo=like.${q(p.merchant + '*')}&order=date.desc&limit=1`, { headers: headers() });
