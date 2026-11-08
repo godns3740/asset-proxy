@@ -363,7 +363,7 @@ const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const W = n => Math.round(n).toLocaleString('ko-KR') + '원';
 const signed = (n, t) => (t === '수입' ? '+' : '-') + W(n);
-const short = n => { const a = Math.abs(n); return a >= 10000 ? (Math.round(a / 1000) / 10).toLocaleString('ko-KR') + '만' : a.toLocaleString('ko-KR'); };
+const short = n => { const a = Math.abs(n); return a >= 10000 ? (Math.round(a / 1000) / 10).toLocaleString('ko-KR') + '만' : a.toLocaleString('ko-KR') + (a ? '원' : ''); };
 const pad = n => String(n).padStart(2, '0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -431,7 +431,8 @@ function cycleSummary(key) {
   const variable = varTx.reduce((s, t) => s + t.amount, 0);
   const byCat = {};
   varTx.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
-  return { start, end, txs, income, fixed, variable, usable: income - fixed, remain: income - fixed - variable, byCat };
+  const salary = txs.filter(t => t.type === '수입' && SALARY_CATS.includes(t.category)).reduce((s, t) => s + t.amount, 0);
+  return { start, end, txs, income, salary, fixed, variable, usable: income - fixed, remain: income - fixed - variable, byCat };
 }
 const catColor = name => (S.cats.find(c => c.name === name) || {}).color || '#6b7280';
 const cycleTitle = key => { const [y, m] = key.split('-').map(Number); const cur = cycleOf(today()); return key === cur ? '이번 달' : (y === new Date().getFullYear() ? `${m}월` : `${y}년 ${m}월`); };
@@ -450,21 +451,35 @@ function renderHome() {
   const key = S.cycle, s = cycleSummary(key), cur = cycleOf(today());
   $('#home-title').textContent = cycleTitle(key);
   $('#home-period').textContent = `${s.start.replace(/-/g, '.')} ~ ${s.end.replace(/-/g, '.')}`;
-  $('#h-remain').textContent = W(s.remain);
-  $('#h-remain').className = 'big num ' + (s.remain < 0 ? 'dn' : '');
   const daily = $('#h-daily');
-  if (key === cur) {
-    const left = Math.max(1, Math.round((parseD(s.end) - parseD(today())) / 864e5) + 1);
-    daily.textContent = s.remain >= 0 ? `남은 ${left}일 · 하루 ${W(Math.floor(s.remain / left))}` : `${W(-s.remain)} 초과했어요`;
+  if (!s.salary) {
+    // 월급이 아직 기록되지 않은 사이클: 초과로 보이지 않게 쓴 돈만 보여 줍니다
+    $('.hero .label').textContent = '지금까지 쓴 돈';
+    $('#h-remain').textContent = W(s.variable);
+    $('#h-remain').className = 'big num';
+    daily.textContent = `월급 전 · 고정지출 ${W(s.fixed)} 예정`;
+    daily.className = 'daily';
+    $('#h-bar').className = 'bar';
+    $('#h-bar i').style.width = '0%';
+    $('#h-spent').textContent = `변동지출 ${W(s.variable)}`;
+    $('#h-usable').textContent = '월급이 들어오면 계산돼요';
   } else {
-    daily.textContent = s.remain >= 0 ? `${W(s.remain)} 남기고 마감` : `${W(-s.remain)} 초과로 마감`;
+    $('.hero .label').textContent = '쓸 수 있는 돈';
+    $('#h-remain').textContent = W(s.remain);
+    $('#h-remain').className = 'big num ' + (s.remain < 0 ? 'dn' : '');
+    if (key === cur) {
+      const left = Math.max(1, Math.round((parseD(s.end) - parseD(today())) / 864e5) + 1);
+      daily.textContent = s.remain >= 0 ? `남은 ${left}일 · 하루 ${W(Math.floor(s.remain / left))}` : `${W(-s.remain)} 초과했어요`;
+    } else {
+      daily.textContent = s.remain >= 0 ? `${W(s.remain)} 남기고 마감` : `${W(-s.remain)} 초과로 마감`;
+    }
+    daily.className = 'daily' + (s.remain < 0 ? ' over' : '');
+    const pct = s.usable > 0 ? Math.min(100, s.variable / s.usable * 100) : (s.variable > 0 ? 100 : 0);
+    $('#h-bar').className = 'bar' + (s.remain < 0 ? ' over' : '');
+    $('#h-bar i').style.width = pct + '%';
+    $('#h-spent').textContent = `변동지출 ${W(s.variable)}`;
+    $('#h-usable').textContent = `사용 가능 ${W(Math.max(0, s.usable))}`;
   }
-  daily.className = 'daily' + (s.remain < 0 ? ' over' : '');
-  const pct = s.usable > 0 ? Math.min(100, s.variable / s.usable * 100) : (s.variable > 0 ? 100 : 0);
-  $('#h-bar').className = 'bar' + (s.remain < 0 ? ' over' : '');
-  $('#h-bar i').style.width = pct + '%';
-  $('#h-spent').textContent = `변동지출 ${W(s.variable)}`;
-  $('#h-usable').textContent = `사용 가능 ${W(Math.max(0, s.usable))}`;
   $('#h-income').textContent = short(s.income);
   $('#h-fixed').textContent = short(s.fixed);
   $('#h-var').textContent = short(s.variable);
@@ -491,8 +506,8 @@ function renderHome() {
 
 function tips(s, prev, isCurrent) {
   const out = [];
-  if (s.income === 0 && isCurrent) out.push(['📥', '월급이 아직 없어요', '월급이 들어오면 사용 가능 금액이 계산돼요.']);
-  if (s.remain < 0) out.push(['⚠️', `${W(-s.remain)} 초과`, '남은 기간엔 꼭 필요한 지출만 해 보세요.']);
+  if (!s.salary && isCurrent) out.push(['📥', '월급이 아직 없어요', `월급이 '월급' 카테고리로 들어오면 쓸 수 있는 돈과 하루 예산이 계산돼요.`]);
+  if (s.salary && s.remain < 0) out.push(['⚠️', `${W(-s.remain)} 초과`, '남은 기간엔 꼭 필요한 지출만 해 보세요.']);
   // 지난달보다 많이 늘어난 카테고리
   const rises = Object.entries(s.byCat).map(([c, v]) => [c, v, prev.byCat[c] || 0]).filter(([, v, p]) => p > 0 && v - p >= 30000 && v / p >= 1.3).sort((a, b) => (b[1] - b[2]) - (a[1] - a[2]));
   rises.slice(0, 2).forEach(([c, v, p]) => out.push(['📈', `${c} ${Math.round(v / p * 100 - 100)}% 늘었어요`, `지난달 ${W(p)} → 이번 달 ${W(v)}`]));
@@ -506,8 +521,8 @@ function tips(s, prev, isCurrent) {
   s.txs.filter(t => t.type === '지출' && !t.is_fixed && t.memo).forEach(t => { const k = t.memo.split(' · ')[0]; shops[k] = shops[k] || { n: 0, sum: 0 }; shops[k].n++; shops[k].sum += t.amount; });
   const topShop = Object.entries(shops).filter(([, v]) => v.n >= 4).sort((a, b) => b[1].sum - a[1].sum)[0];
   if (topShop) out.push(['🏪', `${topShop[0]}에서 ${topShop[1].n}번`, `이번 달 ${W(topShop[1].sum)} 썼어요.`]);
-  if (s.fixed > 0 && s.income > 0 && s.fixed / s.income > 0.5) out.push(['📌', `고정지출이 수입의 ${Math.round(s.fixed / s.income * 100)}%`, '구독·통신·보험 중 안 쓰는 게 있는지 점검해 보세요.']);
-  if (!out.length && s.remain >= 0 && s.income > 0) out.push(['👍', '잘 지키고 있어요', `지금 페이스면 ${W(s.remain)} 남길 수 있어요.`]);
+  if (s.fixed > 0 && s.salary > 0 && s.fixed / s.salary > 0.5) out.push(['📌', `고정지출이 월급의 ${Math.round(s.fixed / s.salary * 100)}%`, '구독·통신·보험 중 안 쓰는 게 있는지 점검해 보세요.']);
+  if (!out.length && s.remain >= 0 && s.salary > 0) out.push(['👍', '잘 지키고 있어요', `지금 페이스면 ${W(s.remain)} 남길 수 있어요.`]);
   return out.slice(0, 4);
 }
 
