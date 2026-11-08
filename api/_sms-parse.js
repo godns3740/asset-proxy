@@ -46,14 +46,17 @@ export function parseSms(text, now) {
   merchant = (merchant || '').replace(/\s+/g, ' ').trim() || '알 수 없음';
 
   const isCard = /카드|결제|승인|사용/.test(lines[amtIdx]);
+  const isTossPay = /토스페이/.test(merchant);
+  const isAtm = /ATM|현금인출|현금출금/i.test(merchant);
   const isCancel = /취소/.test(lines[amtIdx]);
   const type = kind === '입금' && !isCancel ? '수입' : '지출';
-  const payment = isCard ? '체크카드' : '계좌이체';
+  const payment = isTossPay ? '토스' : isAtm ? '현금' : isCard ? '체크카드' : '계좌이체';
 
   // 내 계좌끼리 이체: 상대방 이름이 문자 위쪽의 가려진 예금주 이름(예: 박*원)과 맞으면 건너뜁니다.
   const holderLine = lines.find(l => /^\S*\*\S*\(\d{3,4}\)$/.test(l));
   const holderMask = holderLine ? holderLine.replace(/\(\d{3,4}\)$/, '') : null;
-  const counterparty = merchant.replace(/^[^(]*\((.+)\)$/, '$1').trim();
+  // "간편이체(박규원)" → 박규원, "토뱅 박규원" → 박규원
+  const counterparty = merchant.replace(/^[^(]*\((.+)\)$/, '$1').trim().split(/\s+/).pop();
   const isSelfTransfer = !isCard && !!holderMask && isMaskMatch(holderMask, counterparty);
 
   return { ok: true, kind, isCancel, type, amount, date, time, merchant, payment, isSelfTransfer };
@@ -68,24 +71,31 @@ function isMaskMatch(mask, name) {
 const RULES = [
   { type: '수입', re: /급여|월급|상여|성과급/, cats: ['월급', '급여'] },
   { type: '수입', re: /이자|캐시백|환급/, cats: ['부수입', '기타수입'] },
-  { type: '지출', re: /스타벅스|투썸|이디야|메가.*커피|메가MGC|컴포즈|빽다방|커피|카페|폴바셋|블루보틀|파리바게|뚜레쥬르|베이커리|던킨|배스킨/i, cats: ['커피/간식', '카페', '간식'] },
-  { type: '지출', re: /배달의민족|배민|우아한형제|쿠팡이츠|요기요/, cats: ['배달', '식비', '외식'] },
-  { type: '지출', re: /GS25|CU|씨유|세븐일레븐|이마트24|편의점/i, cats: ['편의점', '식비'] },
-  { type: '지출', re: /맥도날드|버거킹|롯데리아|맘스터치|김밥|식당|분식|치킨|피자|국밥|고기|횟집|초밥|마라/, cats: ['식비', '외식'] },
-  { type: '지출', re: /이마트|홈플러스|롯데마트|마트|코스트코|컬리|마켓/, cats: ['장보기', '생활', '식비'] },
-  { type: '지출', re: /택시|카카오T|카카오모빌리티|티머니|코레일|SRT|지하철|버스|주유|GS칼텍스|SK에너지|S-OIL|후불교통|교통/i, cats: ['교통'] },
-  { type: '지출', re: /넷플릭스|NETFLIX|유튜브|YOUTUBE|스포티파이|애플|APPLE|디즈니|왓챠|티빙|웨이브|쿠팡와우|멜론|구독/i, cats: ['구독', '통신/구독'] },
+  { type: '지출', re: /배달의민족|배민|우아한형제|쿠팡이츠|요기요/, cats: ['배달'], byTime: true },
+  { type: '지출', re: /스타벅스|투썸|이디야|메가.*커피|메가엠지씨|MGC|컴포즈|빽다방|커피|카페|로스터리|폴바셋|블루보틀|파리바게|뚜레쥬르|베이커리|던킨|배스킨|아이스크림|설빙|공차/i, cats: ['커피/간식', '카페', '간식'] },
+  { type: '지출', re: /얼맥|호프|포차|이자카야|술집|맥주|와인|bar\b|펍/i, cats: ['술약속', '외식'] },
+  { type: '지출', re: /GS25|CU|씨유|세븐일레븐|이마트24|편의점/i, cats: ['편의점', '생활비', '식비'] },
+  { type: '지출', re: /맥도날드|버거킹|롯데리아|맘스터치|써브웨이|김밥|식당|분식|치킨|피자|국밥|설렁탕|고기|갈비|양고기|횟집|초밥|마라|카츠|돈까스|솥밥|한와담|국수|냉면|파스타|버거|쌀국수|샤브/, cats: ['외식', '식비'] },
+  { type: '지출', re: /이마트|홈플러스|롯데마트|마트|코스트코|컬리|다이소/, cats: ['생활비', '장보기'] },
+  { type: '지출', re: /택시|카카오T|카카오모빌리티|티머니|코레일|한국철도|SRT|지하철|버스|주유|GS칼텍스|SK에너지|S-OIL|후불교통|교통/i, cats: ['교통'] },
+  { type: '지출', re: /넷플릭스|NETFLIX|유튜브|YOUTUBE|스포티파이|애플|APPLE|디즈니|왓챠|티빙|웨이브|쿠팡와우|멜론|노션|NOTION|이모티콘|ANTHROPIC|CLAUDE|OPENAI|CHATGPT|구독/i, cats: ['구독', '통신/구독'] },
   { type: '지출', re: /SKT|SK텔레콤|KT|LG유플러스|U\+|알뜰폰|통신/i, cats: ['통신', '통신/구독'] },
-  { type: '지출', re: /쿠팡|무신사|11번가|G마켓|지마켓|옥션|올리브영|다이소|네이버페이|29CM|지그재그/i, cats: ['쇼핑'] },
-  { type: '지출', re: /병원|의원|약국|치과|한의원/, cats: ['의료', '병원'] },
+  { type: '지출', re: /쿠팡|무신사|11번가|G마켓|지마켓|옥션|올리브영|네이버페이|29CM|지그재그|의원|피부과|헤어|미용/i, cats: ['미용/쇼핑', '쇼핑'] },
+  { type: '지출', re: /병원|약국|치과|한의원/, cats: ['의료', '병원'] },
   { type: '지출', re: /간편이체|이체|송금/, cats: ['이체', '송금'] },
 ];
 
-export function pickCategory(merchant, type, categoryNames) {
+export function pickCategory(merchant, type, categoryNames, time) {
   const names = categoryNames || [];
   const find = want => names.find(n => n === want) || names.find(n => n.includes(want));
   for (const r of RULES) {
     if (r.type !== type || !r.re.test(merchant)) continue;
+    if (r.byTime) {  // 배달: 16시 전이면 점심, 이후면 저녁
+      const hour = time ? parseInt(time, 10) : 12;
+      const hit = find(hour < 16 ? '배달-점심' : '배달-저녁') || find('배달');
+      if (hit) return hit;
+      continue;
+    }
     for (const c of r.cats) { const hit = find(c); if (hit) return hit; }
   }
   return type === '수입' ? (find('기타수입') || '기타수입') : (find('기타') || '기타');
