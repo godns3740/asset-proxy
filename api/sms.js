@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-app-token');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (!requireAuth(req, res)) return;
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed', message: '방법(메소드)을 POST로 설정해 주세요' });
 
   const body = req.body;
   const text = typeof body === 'string' ? body : (body?.text || body?.message || '');
@@ -60,10 +60,10 @@ export default async function handler(req, res) {
 
     const ir = await fetch(`${base}/transactions`, { method: 'POST', headers: headers(), body: JSON.stringify(tx) });
     const saved = await ir.json();
-    if (!ir.ok) return res.status(502).json({ ok: false, message: '저장 실패', detail: saved });
+    if (!ir.ok) return res.status(502).json({ ok: false, message: `저장 실패: ${saved?.message || ir.status}`, detail: saved });
     const sign = p.type === '수입' ? '+' : '-';
     return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${category} ${sign}${won(p.amount)} (${p.merchant})` });
   } catch (e) {
-    return res.status(500).json({ ok: false, message: e.message });
+    return res.status(500).json({ ok: false, message: `서버 오류: ${e.message}` });
   }
 }

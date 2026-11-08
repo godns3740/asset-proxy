@@ -5,13 +5,13 @@ import { timingSafeEqual } from 'crypto';
 export function requireAuth(req, res) {
   const expected = process.env.APP_TOKEN;
   if (!expected) {
-    res.status(500).json({ error: 'APP_TOKEN is not configured' });
+    res.status(500).json({ error: 'APP_TOKEN is not configured', message: '서버에 APP_TOKEN이 설정되지 않았어요 (Vercel 환경변수 확인)' });
     return false;
   }
   const given = Buffer.from(String(req.headers['x-app-token'] || ''));
   const want = Buffer.from(expected);
   if (given.length !== want.length || !timingSafeEqual(given, want)) {
-    res.status(401).json({ error: 'unauthorized' });
+    res.status(401).json({ error: 'unauthorized', message: '비밀번호가 맞지 않아요 (단축어 x-app-token 값과 Vercel APP_TOKEN 확인)' });
     return false;
   }
   return true;
