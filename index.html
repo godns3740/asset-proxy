@@ -77,6 +77,8 @@ input,select{font:inherit;color:var(--text)}
 .tx .t2{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tx .amt{font-size:15px;font-weight:650;flex-shrink:0}
 .badge{font-size:10px;padding:2px 6px;border-radius:6px;background:var(--surface3);color:var(--sub);margin-left:4px;vertical-align:1px}
+.badge.warn{background:rgba(251,191,36,.15);color:var(--yellow)}
+.tip.link{cursor:pointer;width:100%;text-align:left}
 
 .toolbar{display:flex;gap:8px;margin-bottom:10px}
 .search{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;outline:none}
@@ -405,10 +407,28 @@ function salaryDate(key) {
   const ds = S.tx.filter(t => t.type === '수입' && SALARY_CATS.includes(t.category) && t.date.startsWith(key)).map(t => t.date).sort();
   return ds[0] || null;
 }
+// 월급날: 매달 25일, 주말·공휴일이면 그 전 평일로 당겨짐
+const PAYDAY = 25;
+const HOLIDAYS = new Set([
+  // 설날·추석·부처님오신날(대체공휴일 포함) — 25일 근처에 걸릴 수 있는 공휴일
+  '2025-01-28','2025-01-29','2025-01-30','2025-05-05','2025-05-06','2025-10-03','2025-10-05','2025-10-06','2025-10-07','2025-10-08','2025-10-09','2025-12-25',
+  '2026-02-16','2026-02-17','2026-02-18','2026-05-24','2026-05-25','2026-09-24','2026-09-25','2026-09-26','2026-12-25',
+  '2027-02-06','2027-02-07','2027-02-08','2027-02-09','2027-05-13','2027-09-14','2027-09-15','2027-09-16','2027-12-25',
+  '2028-01-25','2028-01-26','2028-01-27','2028-05-02','2028-10-02','2028-10-03','2028-10-04','2028-12-25',
+  '2029-02-12','2029-02-13','2029-02-14','2029-05-20','2029-05-21','2029-09-21','2029-09-22','2029-09-23','2029-09-24','2029-12-25',
+  '2030-02-02','2030-02-03','2030-02-04','2030-05-09','2030-09-11','2030-09-12','2030-09-13','2030-12-25',
+]);
+const FIXED_HOLIDAYS = ['01-01','03-01','05-05','06-06','08-15','10-03','10-09','12-25'];
+const isOffDay = ds => { const d = parseD(ds).getDay(); return d === 0 || d === 6 || HOLIDAYS.has(ds) || FIXED_HOLIDAYS.includes(ds.slice(5)); };
+function expectedPayday(key) {
+  let ds = `${key}-${pad(PAYDAY)}`;
+  while (isOffDay(ds)) ds = addDays(ds, -1);
+  return ds;
+}
 function cycleRange(key) {
   const prev = ymShift(key, -1);
-  const start = salaryDate(prev) || `${prev}-25`;
-  const nextStart = salaryDate(key) || `${key}-25`;
+  const start = salaryDate(prev) || expectedPayday(prev);
+  const nextStart = salaryDate(key) || expectedPayday(key);
   return { start, end: addDays(nextStart, -1) };
 }
 function cycleOf(dateStr) {
@@ -498,7 +518,9 @@ function renderHome() {
     </button>`;
   }).join('') : '<div class="empty">아직 지출이 없어요</div>';
 
-  $('#h-tips').innerHTML = tips(s, prev, key === cur).map(t => `<div class="tip"><div class="ic">${t[0]}</div><div><b>${esc(t[1])}</b><span>${esc(t[2])}</span></div></div>`).join('') || '<div class="empty">내역이 쌓이면 절약 포인트를 알려 드려요</div>';
+  $('#h-tips').innerHTML = tips(s, prev, key === cur).map(t => t[3]
+    ? `<button class="tip link" data-search="토스페이"><div class="ic">${t[0]}</div><div><b>${esc(t[1])}</b><span>${esc(t[2])}</span></div></button>`
+    : `<div class="tip"><div class="ic">${t[0]}</div><div><b>${esc(t[1])}</b><span>${esc(t[2])}</span></div></div>`).join('') || '<div class="empty">내역이 쌓이면 절약 포인트를 알려 드려요</div>';
 
   const recent = [...s.txs].sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id)).slice(0, 5);
   $('#h-recent').innerHTML = recent.length ? recent.map(txRow).join('') : '<div class="empty">내역이 없어요</div>';
@@ -506,6 +528,8 @@ function renderHome() {
 
 function tips(s, prev, isCurrent) {
   const out = [];
+  const toss = s.txs.filter(isTossUnknown);
+  if (toss.length) out.push(['🔎', `토스페이 ${toss.length}건, 어디서 썼는지 몰라요`, `합계 ${W(toss.reduce((a, t) => a + t.amount, 0))}. 눌러서 가게 이름을 적어 두면 분석이 정확해져요.`, 'toss']);
   if (!s.salary && isCurrent) out.push(['📥', '월급이 아직 없어요', `월급이 '월급' 카테고리로 들어오면 쓸 수 있는 돈과 하루 예산이 계산돼요.`]);
   if (s.salary && s.remain < 0) out.push(['⚠️', `${W(-s.remain)} 초과`, '남은 기간엔 꼭 필요한 지출만 해 보세요.']);
   // 지난달보다 많이 늘어난 카테고리
@@ -515,7 +539,7 @@ function tips(s, prev, isCurrent) {
   const small = {};
   s.txs.filter(t => t.type === '지출' && !t.is_fixed && t.amount <= 15000).forEach(t => { small[t.category] = small[t.category] || { n: 0, sum: 0 }; small[t.category].n++; small[t.category].sum += t.amount; });
   const topSmall = Object.entries(small).sort((a, b) => b[1].sum - a[1].sum)[0];
-  if (topSmall && topSmall[1].n >= 5) out.push(['☕', `${topSmall[0]} 소액 결제 ${topSmall[1].n}번`, `1만5천원 이하 결제가 모여 ${W(topSmall[1].sum)}예요. 횟수를 반으로 줄이면 약 ${W(topSmall[1].sum / 2)} 아껴요.`]);
+  if (topSmall && topSmall[1].n >= 5) out.push(['☕', `${topSmall[0]} 소액 결제 ${topSmall[1].n}번`, `1만5천원 이하 결제가 모여 ${W(topSmall[1].sum)}이에요. 횟수를 반으로 줄이면 약 ${W(topSmall[1].sum / 2)} 아낄 수 있어요.`]);
   // 자주 가는 가게
   const shops = {};
   s.txs.filter(t => t.type === '지출' && !t.is_fixed && t.memo).forEach(t => { const k = t.memo.split(' · ')[0]; shops[k] = shops[k] || { n: 0, sum: 0 }; shops[k].n++; shops[k].sum += t.amount; });
@@ -523,15 +547,17 @@ function tips(s, prev, isCurrent) {
   if (topShop) out.push(['🏪', `${topShop[0]}에서 ${topShop[1].n}번`, `이번 달 ${W(topShop[1].sum)} 썼어요.`]);
   if (s.fixed > 0 && s.salary > 0 && s.fixed / s.salary > 0.5) out.push(['📌', `고정지출이 월급의 ${Math.round(s.fixed / s.salary * 100)}%`, '구독·통신·보험 중 안 쓰는 게 있는지 점검해 보세요.']);
   if (!out.length && s.remain >= 0 && s.salary > 0) out.push(['👍', '잘 지키고 있어요', `지금 페이스면 ${W(s.remain)} 남길 수 있어요.`]);
-  return out.slice(0, 4);
+  return out.slice(0, 5);
 }
 
+// 토스페이(페이스페이)는 은행 내역에 가게 이름이 안 남아서, 메모를 고칠 때까지 표시합니다
+const isTossUnknown = t => t.type === '지출' && /^토스페이( \(|$| ·)/.test(t.memo || '');
 function txRow(t) {
   const c = catColor(t.category);
   const [title, time] = String(t.memo || '').split(' · ');
   return `<button class="tx" data-tx="${t.id}">
     <span class="ic" style="background:${esc(c)}22;color:${esc(c)}">${esc((t.category || '?').slice(0, 1))}</span>
-    <span class="body"><span class="t1" style="display:block">${esc(title || t.category)}${t.is_fixed ? '<span class="badge">고정</span>' : ''}</span>
+    <span class="body"><span class="t1" style="display:block">${esc(title || t.category)}${t.is_fixed ? '<span class="badge">고정</span>' : ''}${isTossUnknown(t) ? '<span class="badge warn">어디서?</span>' : ''}</span>
       <span class="t2" style="display:block">${esc(t.category)}${t.payment ? ' · ' + esc(t.payment) : ''}${time ? ' · ' + esc(time) : ''}</span></span>
     <span class="amt num ${t.type === '수입' ? 'up' : ''}">${signed(t.amount, t.type)}</span>
   </button>`;
@@ -659,6 +685,7 @@ function openTx(id) {
   $('#sh-tx-title').textContent = t ? '내역 수정' : '내역 추가';
   $('#t-amount').value = t ? t.amount.toLocaleString('ko-KR') : '';
   $('#t-memo').value = t ? (t.memo || '') : '';
+  $('#t-memo').placeholder = t && isTossUnknown(t) ? '토스 앱 결제내역에서 가게 이름을 확인해 적어 주세요' : '예: 스타벅스';
   $('#t-date').value = t ? t.date : (S.calSel || today());
   $('#t-fixed').checked = !!(t && t.is_fixed);
   $('#t-del').classList.toggle('hidden', !t);
@@ -773,13 +800,14 @@ $('#lock-form').addEventListener('submit', e => { e.preventDefault(); const v = 
 $('#logout').addEventListener('click', () => { if (confirm('이 기기에서 비밀번호를 지울까요?')) { setToken(''); showLock(false); } });
 $$('.tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-cycle],[data-go],[data-tx],[data-fx],[data-cat],[data-catgo],[data-day],[data-close]');
+  const t = e.target.closest('[data-cycle],[data-go],[data-tx],[data-fx],[data-cat],[data-catgo],[data-day],[data-close],[data-search]');
   if (!t) return;
   if (t.dataset.cycle && !t.disabled) { S.cycle = ymShift(S.cycle, +t.dataset.cycle); S.calSel = null; render(); }
   else if (t.dataset.go) go(t.dataset.go);
   else if (t.dataset.tx) openTx(+t.dataset.tx);
   else if (t.dataset.fx) openFx(+t.dataset.fx);
   else if (t.dataset.cat) openCat(+t.dataset.cat);
+  else if (t.dataset.search) { S.txCats.clear(); S.txType = ''; S.txView = 'list'; $('#tx-search').value = t.dataset.search; go('tx'); }
   else if (t.dataset.catgo) { S.txCats = new Set([t.dataset.catgo]); S.txType = ''; go('tx'); }
   else if (t.dataset.day) { S.calSel = S.calSel === t.dataset.day ? null : t.dataset.day; renderTx(); }
   else if (t.hasAttribute('data-close')) closeSheets();

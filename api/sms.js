@@ -14,11 +14,24 @@ const headers = () => ({
 });
 const won = n => n.toLocaleString('ko-KR') + '원';
 const norm = s => String(s || '').toLowerCase().replace(/[\s()（）\[\]·._-]/g, '');
+// 고정지출 이름과 문자에 찍히는 이름이 다른 경우의 별칭
+const FIXED_ALIASES = [
+  [/휴대폰|통신|핸드폰/, /SK텔레콤|SKT|KT|LG유플러스|U\+|알뜰/i],
+  [/클로드|claude/i, /ANTHROPIC|CLAUDE/i],
+  [/넷플릭스/, /NETFLIX|넷플릭스/i],
+  [/icloud|아이클라우드/i, /APPLE|ICLOUD/i],
+  [/티빙/, /TVING|티빙/i],
+  [/노션/, /NOTION|노션/i],
+  [/이모티콘/, /이모티콘/],
+  [/인터넷/, /인터넷|SK브로드밴드|KT|LG유플러스/i],
+];
 function matchFixed(merchant, list) {
   const m = norm(merchant);
   return list.find(f => {
+    if (f.is_active === false) return false;
     const n = norm(f.name);
-    return f.is_active !== false && n.length >= 2 && (m.includes(n) || (m.length >= 2 && n.includes(m)));
+    if (n.length >= 2 && (m.includes(n) || (m.length >= 2 && n.includes(m)))) return true;
+    return FIXED_ALIASES.some(([fixedRe, smsRe]) => fixedRe.test(f.name) && smsRe.test(merchant));
   }) || null;
 }
 
@@ -46,7 +59,7 @@ export default async function handler(req, res) {
     const names = Array.isArray(cats) ? cats.filter(c => c.type === p.type).map(c => c.name) : [];
     // 고정지출 목록의 이름과 겹치는 출금이면 고정지출로 표시 (변동지출 합계에서 빠짐)
     const fixedHit = p.type === '지출' ? matchFixed(p.merchant, Array.isArray(fixedList) ? fixedList : []) : null;
-    let category = pickCategory(p.merchant, p.type, names);
+    let category = pickCategory(p.merchant, p.type, names, p.time);
     if (fixedHit && fixedHit.category && names.includes(fixedHit.category)) category = fixedHit.category;
     const memo = p.time ? `${p.merchant} · ${p.time}` : p.merchant;
     const tx = { date: p.date, type: p.type, category, payment: p.payment, memo, amount: p.amount, is_fixed: !!fixedHit };
