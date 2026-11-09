@@ -1,1 +1,8 @@
-{}
+{
+  "crons": [
+    { "path": "/api/report?cron=1", "schedule": "0 23 * * *" }
+  ],
+  "functions": {
+    "api/report.js": { "includeFiles": "fonts/**", "maxDuration": 30 }
+  }
+}

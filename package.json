@@ -1,5 +1,9 @@
 {
   "name": "asset-proxy",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.15.2"
+  }
 }
