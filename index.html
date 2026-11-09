@@ -130,6 +130,26 @@ input,select{font:inherit;color:var(--text)}
 .tabs nav{display:flex;width:100%;max-width:560px}
 .tabs button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--muted)}
 .tabs button svg{width:22px;height:22px}
+.tabs button{position:relative}
+.tab-badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--yellow);color:#2a1d00;font-size:10px;font-weight:700;display:grid;place-items:center}
+
+/* review cards */
+.rv-progress{height:4px;border-radius:9px;background:var(--surface3);overflow:hidden;margin:-4px 0 14px}
+.rv-progress i{display:block;height:100%;background:var(--yellow);transition:width .3s}
+.rv-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:20px 18px;animation:rvIn .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes rvIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.rv-when{font-size:13px;color:var(--sub)}
+.rv-amt{font-size:34px;font-weight:700;letter-spacing:-.03em;margin:2px 0 4px}
+.rv-orig{font-size:15px;color:var(--text);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rv-hint{display:flex;gap:10px;align-items:flex-start;background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.22);color:#f5d27a;border-radius:14px;padding:11px 12px;font-size:13px;margin:14px 0 16px}
+.rv-hint b{color:var(--yellow)}
+.rv-sugg{font-size:12px;color:var(--accent);margin:-6px 0 8px}
+.pick.big button{padding:10px 14px;font-size:15px}
+.rv-actions{display:grid;grid-template-columns:auto auto 1fr;gap:8px;margin-top:18px}
+.rv-actions .btn{white-space:nowrap;padding:13px 12px;font-size:14px}
+.rv-done{text-align:center;padding:48px 16px}
+.rv-done .big{font-size:44px;margin-bottom:8px}
+.rv-done p{color:var(--sub);font-size:14px;margin-top:6px}
 .tabs button.on{color:var(--text)}
 
 /* sheet */
@@ -265,6 +285,12 @@ input,select{font:inherit;color:var(--text)}
       <div id="fx-list"></div>
     </section>
 
+    <!-- REVIEW -->
+    <section id="v-review" data-view class="hidden">
+      <div class="top"><h1>확인 필요</h1><span class="sub num" id="rv-count"></span></div>
+      <div id="rv-body"></div>
+    </section>
+
     <!-- MORE -->
     <section id="v-more" data-view class="hidden">
       <div class="top"><h1>더보기</h1></div>
@@ -294,6 +320,7 @@ input,select{font:inherit;color:var(--text)}
   <div class="tabs"><nav>
     <button data-tab="home" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</button>
     <button data-tab="tx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>내역</button>
+    <button data-tab="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>확인<span class="tab-badge hidden" id="rv-badge"></span></button>
     <button data-tab="fixed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>고정지출</button>
     <button data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>더보기</button>
   </nav></div>
@@ -397,6 +424,7 @@ const S = {
   cycle: null,          // 'YYYY-MM' (월급을 받은 달 기준 다음 달 표기)
   tab: 'home',
   txType: '', txCats: new Set(), txView: 'list', calSel: null,
+  rvSkip: new Set(), rvDraft: null, rvDoneCount: 0,
   catType: '지출',
   edit: { tx: null, fx: null, cat: null },
 };
@@ -519,7 +547,7 @@ function renderHome() {
   }).join('') : '<div class="empty">아직 지출이 없어요</div>';
 
   $('#h-tips').innerHTML = tips(s, prev, key === cur).map(t => t[3]
-    ? `<button class="tip link" data-search="토스페이"><div class="ic">${t[0]}</div><div><b>${esc(t[1])}</b><span>${esc(t[2])}</span></div></button>`
+    ? `<button class="tip link" data-go="${t[3]}"><div class="ic">${t[0]}</div><div><b>${esc(t[1])}</b><span>${esc(t[2])}</span></div></button>`
     : `<div class="tip"><div class="ic">${t[0]}</div><div><b>${esc(t[1])}</b><span>${esc(t[2])}</span></div></div>`).join('') || '<div class="empty">내역이 쌓이면 절약 포인트를 알려 드려요</div>';
 
   const recent = [...s.txs].sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id)).slice(0, 5);
@@ -528,8 +556,8 @@ function renderHome() {
 
 function tips(s, prev, isCurrent) {
   const out = [];
-  const toss = s.txs.filter(isTossUnknown);
-  if (toss.length) out.push(['🔎', `토스페이 ${toss.length}건, 어디서 썼는지 몰라요`, `합계 ${W(toss.reduce((a, t) => a + t.amount, 0))}. 눌러서 가게 이름을 적어 두면 분석이 정확해져요.`, 'toss']);
+  const pending = reviewAll();
+  if (pending.length) out.push(['🔎', `확인할 내역 ${pending.length}건`, `어디에 썼는지 모르는 지출 ${W(pending.reduce((a, t) => a + t.amount, 0))}. 눌러서 하나씩 정리하면 분석이 정확해져요.`, 'review']);
   if (!s.salary && isCurrent) out.push(['📥', '월급이 아직 없어요', `월급이 '월급' 카테고리로 들어오면 쓸 수 있는 돈과 하루 예산이 계산돼요.`]);
   if (s.salary && s.remain < 0) out.push(['⚠️', `${W(-s.remain)} 초과`, '남은 기간엔 꼭 필요한 지출만 해 보세요.']);
   // 지난달보다 많이 늘어난 카테고리
@@ -552,12 +580,20 @@ function tips(s, prev, isCurrent) {
 
 // 토스페이(페이스페이)는 은행 내역에 가게 이름이 안 남아서, 메모를 고칠 때까지 표시합니다
 const isTossUnknown = t => t.type === '지출' && /^토스페이( \(|$| ·)/.test(t.memo || '');
+// 확인 필요: 문자로 자동 기록됐는데 카테고리를 알 수 없는 지출 (직접 입력한 내역은 제외)
+const REVIEWED = '확인함';
+const isAutoRecorded = t => / · \d{2}:\d{2}$/.test(t.memo || '');
+const memoName = t => String(t.memo || '').split(' · ')[0];
+const memoTime = t => { const m = String(t.memo || '').match(/ · (\d{2}:\d{2})$/); return m ? m[1] : ''; };
+const needsReview = t => t.type === '지출' && !t.is_fixed && t.subcategory !== REVIEWED
+  && (isTossUnknown(t) || ((!t.category || t.category === '기타') && isAutoRecorded(t)));
+const reviewAll = () => S.tx.filter(needsReview).sort((a, b) => (b.date + memoTime(b)).localeCompare(a.date + memoTime(a)));
 function txRow(t) {
   const c = catColor(t.category);
   const [title, time] = String(t.memo || '').split(' · ');
   return `<button class="tx" data-tx="${t.id}">
     <span class="ic" style="background:${esc(c)}22;color:${esc(c)}">${esc((t.category || '?').slice(0, 1))}</span>
-    <span class="body"><span class="t1" style="display:block">${esc(title || t.category)}${t.is_fixed ? '<span class="badge">고정</span>' : ''}${isTossUnknown(t) ? '<span class="badge warn">어디서?</span>' : ''}</span>
+    <span class="body"><span class="t1" style="display:block">${esc(title || t.category)}${t.is_fixed ? '<span class="badge">고정</span>' : ''}${needsReview(t) ? '<span class="badge warn">확인 필요</span>' : ''}</span>
       <span class="t2" style="display:block">${esc(t.category)}${t.payment ? ' · ' + esc(t.payment) : ''}${time ? ' · ' + esc(time) : ''}</span></span>
     <span class="amt num ${t.type === '수입' ? 'up' : ''}">${signed(t.amount, t.type)}</span>
   </button>`;
@@ -646,6 +682,87 @@ function renderMore() {
   $('#cat-list').innerHTML = cats.length ? cats.map(c => `<button class="row" data-cat="${c.id}"><span class="dot" style="background:${esc(c.color)}"></span><span class="grow t1">${esc(c.name)}</span><span class="t2">${counts[c.name] || 0}건</span></button>`).join('') : '<div class="empty">카테고리가 없어요</div>';
 }
 
+// ─── 렌더: 확인 필요 ─────────────────────────────────────────
+function reviewHint(t) {
+  const name = memoName(t);
+  if (isTossUnknown(t)) return ['💳', '<b>토스페이</b>로 결제해서 가게 이름이 안 남았어요. 토스 앱 → 내역에서 같은 날짜·금액을 찾아 가게 이름을 적어 주세요.'];
+  if (t.payment === '현금' || /ATM/i.test(name)) return ['💵', '<b>현금으로 뽑은 돈</b>이에요. 어디에 쓴(쓸) 돈인지 골라 주세요.'];
+  if (t.payment === '계좌이체' && /^[가-힣]{2,4}$/.test(name)) return ['👤', `<b>${esc(name)}</b>님에게 보낸 돈이에요. 무슨 돈이었는지 적어 주세요. (예: 더치페이, 선물, 경조사)`];
+  return ['🏷️', `<b>${esc(name)}</b> — 어떤 곳인지 자동으로 알 수 없었어요. 무엇을 산 곳인지 골라 주세요.`];
+}
+function learnedCategory(name) {   // 이전에 같은 이름을 어떤 카테고리로 정리했는지
+  if (!name || /^토스페이|ATM/i.test(name)) return '';
+  const hit = S.tx.filter(x => x.type === '지출' && x.category && x.category !== '기타' && (memoName(x) === name || memoName(x).endsWith(`(${name})`))).sort((a, b) => b.date.localeCompare(a.date))[0];
+  return hit ? hit.category : '';
+}
+function renderReview() {
+  const all = reviewAll(), queue = all.filter(t => !S.rvSkip.has(t.id));
+  $('#rv-count').textContent = all.length ? `${all.length}건 남음` : '';
+  const body = $('#rv-body');
+  if (!all.length) {
+    body.innerHTML = `<div class="rv-done"><div class="big">🎉</div><b style="font-size:18px">모두 정리했어요</b><p>새로 들어온 내역 중 애매한 게 생기면 여기에 모아 둘게요.${S.rvDoneCount ? `<br>이번에 ${S.rvDoneCount}건 정리했어요.` : ''}</p></div>`;
+    return;
+  }
+  if (!queue.length) {
+    body.innerHTML = `<div class="rv-done"><div class="big">⏭️</div><b style="font-size:18px">건너뛴 내역 ${all.length}건</b><p>나중에 다시 볼 수 있어요.</p><button class="btn ghost" id="rv-again" style="margin-top:16px">건너뛴 내역 다시 보기</button></div>`;
+    return;
+  }
+  const t = queue[0];
+  const name = memoName(t), toss = isTossUnknown(t);
+  const learned = toss ? '' : learnedCategory(name);
+  if (!S.rvDraft || S.rvDraft.id !== t.id) S.rvDraft = { id: t.id, name: toss ? '' : name, category: learned, same: true };
+  const d = S.rvDraft, dd = parseD(t.date);
+  const sameCount = toss ? 0 : all.filter(x => x.id !== t.id && memoName(x) === name).length;
+  const [hi, ht] = reviewHint(t);
+  const cats = S.cats.filter(c => c.type === '지출' && c.name !== '기타').sort((a, b) => a.name.localeCompare(b.name));
+  const done = S.rvDoneCount, total = done + all.length;
+  body.innerHTML = `
+    <div class="rv-progress"><i style="width:${total ? done / total * 100 : 0}%"></i></div>
+    <div class="rv-card" id="rv-card">
+      <div class="rv-when num">${dd.getMonth() + 1}월 ${dd.getDate()}일 ${DOW[dd.getDay()]}${memoTime(t) ? ' · ' + memoTime(t) : ''} · ${esc(t.payment || '')}</div>
+      <div class="rv-amt num">-${W(t.amount)}</div>
+      <div class="rv-orig">${esc(name || '(이름 없음)')}</div>
+      <div class="rv-hint"><span>${hi}</span><span>${ht}</span></div>
+      <div class="field"><label>어디서 / 무엇</label><input class="input" id="rv-name" value="${esc(d.name)}" placeholder="${toss ? '예: 스타벅스 역삼점' : '예: 더치페이, 생일선물'}" autocomplete="off"></div>
+      <div class="field"><label>카테고리</label>
+        ${learned ? `<div class="rv-sugg">↺ 지난번에 '${esc(learned)}'(으)로 정리했어요</div>` : ''}
+        <div class="pick big" id="rv-cats">${cats.map(c => `<button data-c="${esc(c.name)}" class="${c.name === d.category ? 'on' : ''}"><span class="dot" style="background:${esc(c.color)}"></span>${esc(c.name)}</button>`).join('')}</div>
+      </div>
+      ${sameCount ? `<label class="check"><input type="checkbox" id="rv-same" ${d.same ? 'checked' : ''}> 같은 이름 ${sameCount}건도 같이 정리</label>` : ''}
+      <div class="rv-actions">
+        <button class="btn ghost" id="rv-skip">건너뛰기</button>
+        <button class="btn ghost" id="rv-keep">기타로 둘게요</button>
+        <button class="btn primary" id="rv-save" ${d.category ? '' : 'disabled'}>저장하고 다음</button>
+      </div>
+    </div>`;
+}
+async function saveReview(keepEtc) {
+  const t = S.tx.find(x => x.id === S.rvDraft.id);
+  if (!t) return;
+  const d = S.rvDraft, name = ($('#rv-name')?.value || '').trim() || memoName(t);
+  const category = keepEtc ? (t.category || '기타') : d.category;
+  if (!category) return toast('카테고리를 골라 주세요');
+  const targets = [t];
+  if (!isTossUnknown(t) && $('#rv-same')?.checked) reviewAll().forEach(x => { if (x.id !== t.id && memoName(x) === memoName(t)) targets.push(x); });
+  $$('#rv-card button').forEach(b => b.disabled = true);
+  try {
+    await Promise.all(targets.map(x => {
+      const orig = memoName(x);
+      // 원래 이름(사람·가게)은 괄호로 남깁니다: "더치페이 (김유림)"
+      const label = isTossUnknown(x) || name === orig || name.includes(orig) ? name : `${name} (${orig})`;
+      const memo = label + (memoTime(x) ? ' · ' + memoTime(x) : '');
+      const body = { id: x.id, memo, category, subcategory: REVIEWED };
+      return api('transactions', { method: 'PATCH', body }).then(() => Object.assign(x, body));
+    }));
+    S.rvDoneCount += targets.length;
+    S.rvDraft = null;
+    const left = reviewAll().length;
+    toast(targets.length > 1 ? `${targets.length}건 정리했어요 · 남은 ${left}건` : `저장했어요 · 남은 ${left}건`);
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (e) { toast('저장 실패: ' + e.message); renderReview(); }
+}
+
 // ─── 화면 전환 ───────────────────────────────────────────────
 function render() {
   const { first, last } = cycleBounds();
@@ -655,12 +772,16 @@ function render() {
   if (S.tab === 'tx') renderTx();
   if (S.tab === 'fixed') renderFixed();
   if (S.tab === 'more') renderMore();
+  if (S.tab === 'review') renderReview();
+  const n = reviewAll().length, badge = $('#rv-badge');
+  badge.textContent = n > 99 ? '99+' : n;
+  badge.classList.toggle('hidden', !n);
 }
 function go(tab) {
   S.tab = tab;
   $$('[data-view]').forEach(v => v.classList.toggle('hidden', v.id !== 'v-' + tab));
   $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-  $('#fab').classList.toggle('hidden', tab === 'more' || tab === 'fixed');
+  $('#fab').classList.toggle('hidden', tab === 'more' || tab === 'fixed' || tab === 'review');
   window.scrollTo(0, 0);
   render();
 }
@@ -835,6 +956,19 @@ amountInput($('#t-amount')); amountInput($('#f-amount'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
 // 앱으로 돌아오면 새 내역(문자 자동 기록)을 다시 불러옵니다
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && getToken() && !$('#app').classList.contains('hidden')) { try { await loadAll(); render(); } catch (e) {} } });
+
+$('#rv-body').addEventListener('click', e => {
+  const c = e.target.closest('[data-c]');
+  if (c) { S.rvDraft.category = c.dataset.c; $$('#rv-cats button').forEach(b => b.classList.toggle('on', b === c)); $('#rv-save').disabled = false; return; }
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.id === 'rv-skip') { S.rvSkip.add(S.rvDraft.id); S.rvDraft = null; renderReview(); }
+  else if (b.id === 'rv-keep') saveReview(true);
+  else if (b.id === 'rv-save') saveReview(false);
+  else if (b.id === 'rv-again') { S.rvSkip.clear(); renderReview(); }
+});
+$('#rv-body').addEventListener('input', e => { if (e.target.id === 'rv-name' && S.rvDraft) S.rvDraft.name = e.target.value; });
+$('#rv-body').addEventListener('change', e => { if (e.target.id === 'rv-same' && S.rvDraft) S.rvDraft.same = e.target.checked; });
 
 boot();
 </script>
