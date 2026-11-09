@@ -1024,12 +1024,9 @@ async function loadAssets() {
     showLoading(true);
     const r = await fetch(`${PROXY_BASE_URL}/api/assets`);
     const data = await r.json();
-    if (Array.isArray(data) && data.length > 0) {
-      assets = data.map(dbToAsset);
-    } else {
-      // 최초 실행: 기본 데이터 DB에 삽입
-      await seedDefaultAssets();
-    }
+    // 기본 데이터 자동 삽입은 하지 않습니다 (불러오기 실패 시 자산이 두 벌로 복사되던 문제)
+    if (!r.ok || !Array.isArray(data)) throw new Error((data && (data.message || data.error)) || ('HTTP ' + r.status));
+    assets = data.map(dbToAsset);
   } catch(e) {
     console.warn('DB 로드 실패, 로컬 폴백:', e);
     const saved = localStorage.getItem('gw_assets');

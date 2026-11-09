@@ -60,9 +60,16 @@ export function parseSms(text, now, opts = {}) {
   const counterparty = merchant.replace(/^[^(]*\((.+)\)$/, '$1').trim().split(/\s+/).pop();
   // 신한처럼 가려진 예금주 줄이 없는 은행은 설정한 본인 이름(OWNER_NAME)과 비교합니다
   const owner = String(opts.ownerName || '').trim();
-  const isSelfTransfer = !isCard && ((!!holderMask && isMaskMatch(holderMask, counterparty)) || (!!owner && counterparty === owner));
+  // 세이프박스·저금통: 같은 은행 안에서 내 돈을 옮긴 것
+  const isSafebox = /세이프박스|저금통/.test(merchant);
+  const isSelfTransfer = isSafebox || (!isCard && ((!!holderMask && isMaskMatch(holderMask, counterparty)) || (!!owner && counterparty === owner)));
 
-  return { ok: true, kind, isCancel, type, amount, date, time, merchant, payment, isSelfTransfer };
+  // 잔액·은행: 통장별 잔액을 맞추는 데 씁니다
+  const bm = text.match(/잔액\s*([\d,]+)/);
+  const balance = bm ? parseInt(bm[1].replace(/,/g, ''), 10) : null;
+  const bank = /카카오뱅크/.test(text) ? '카카오뱅크' : /(^|\n)\s*신한/.test(text) ? '신한' : '';
+
+  return { ok: true, kind, isCancel, type, amount, date, time, merchant, payment, isSelfTransfer, isSafebox, balance, bank };
 }
 
 function isMaskMatch(mask, name) {

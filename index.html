@@ -248,6 +248,28 @@ input,select{font:inherit;color:var(--text)}
         <h2>최근 내역 <button class="sub" data-go="tx" style="font-size:13px">전체 ›</button></h2>
         <div id="h-recent"></div>
       </div>
+
+      <button class="card" data-go="assets" style="width:100%;text-align:left;display:block">
+        <h2 style="margin-bottom:6px">🏦 내 돈은 어디에 <span class="sub" style="font-size:13px">통장별 보기 ›</span></h2>
+        <div class="num" style="font-size:22px;font-weight:700" id="h-assets">—</div>
+        <div class="sub num" style="font-size:13px;margin-top:2px" id="h-assets-sub"></div>
+      </button>
+    </section>
+
+    <!-- ASSETS -->
+    <section id="v-assets" data-view class="hidden">
+      <div class="top"><h1>내 돈은 어디에</h1><button class="btn small ghost" data-go="home">닫기</button></div>
+      <div class="card hero">
+        <div class="label">전체</div>
+        <div class="big num" id="as-total">—</div>
+        <div class="stats" style="margin:12px 0 0">
+          <div class="stat"><div class="k">바로 쓸 수 있는 돈</div><div class="v num up" id="as-cash">—</div></div>
+          <div class="stat"><div class="k">적금·청약</div><div class="v num" id="as-save">—</div></div>
+          <div class="stat"><div class="k">투자·연금</div><div class="v num" id="as-invest">—</div></div>
+        </div>
+      </div>
+      <div class="sub" style="font-size:12px;margin:0 2px 10px">카카오뱅크·신한·세이프박스는 문자가 올 때마다 잔액이 자동으로 맞춰져요. 나머지는 눌러서 고쳐 주세요.</div>
+      <div id="as-list"></div>
     </section>
 
     <!-- TRANSACTIONS -->
@@ -319,9 +341,10 @@ input,select{font:inherit;color:var(--text)}
         <div id="cat-list"></div>
       </div>
       <div class="card">
-        <h2>자산 · 계획 <span class="muted" style="font-size:12px;font-weight:400">예전 화면</span></h2>
-        <a class="link-row" href="/old/">자산 관리 · 시뮬레이터 · 타임라인 <span>›</span></a>
-        <a class="link-row" href="/old/">내집마련 계산기 <span>›</span></a>
+        <h2>자산 · 계획</h2>
+        <button class="link-row" data-go="assets" style="width:100%">통장별 잔액 <span>›</span></button>
+        <a class="link-row" href="/old/">시뮬레이터 · 타임라인 (예전 화면) <span>›</span></a>
+        <a class="link-row" href="/old/">내집마련 계산기 (예전 화면) <span>›</span></a>
       </div>
       <div class="card">
         <h2>기기</h2>
@@ -381,6 +404,17 @@ input,select{font:inherit;color:var(--text)}
     <button class="btn danger hidden" id="f-del">삭제</button>
     <button class="btn ghost" data-close>취소</button>
     <button class="btn primary" id="f-save">저장</button>
+  </div>
+</div>
+
+<div class="sheet" id="sh-asset" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <h3 id="sh-asset-title">잔액 고치기</h3>
+  <div class="field"><label>지금 잔액</label><input class="input amount-input num" id="a-amount" inputmode="numeric" autocomplete="off"></div>
+  <div class="sub" id="a-hint" style="font-size:12px;margin:-6px 0 14px"></div>
+  <div class="sheet-actions">
+    <button class="btn ghost" data-close>취소</button>
+    <button class="btn primary" id="a-save">저장</button>
   </div>
 </div>
 
@@ -447,7 +481,7 @@ const S = {
   txType: '', txCats: new Set(), txView: 'list', calSel: null,
   rvSkip: new Set(), rvDraft: null, rvDoneCount: 0,
   catType: '지출',
-  edit: { tx: null, fx: null, cat: null },
+  edit: { tx: null, fx: null, cat: null, asset: null }, assets: [],
 };
 
 // ─── 월급 사이클 ─────────────────────────────────────────────
@@ -568,7 +602,8 @@ const cycleTitle = key => { const [y, m] = key.split('-').map(Number); const cur
 
 // ─── 데이터 로드 ─────────────────────────────────────────────
 async function loadAll() {
-  const [tx, fixed, cats] = await Promise.all([api('transactions'), api('fixed'), api('categories')]);
+  const [tx, fixed, cats, assets] = await Promise.all([api('transactions'), api('fixed'), api('categories'), api('assets').catch(() => [])]);
+  S.assets = Array.isArray(assets) ? assets.map(a => ({ ...a, amount: Number(a.amount) || 0 })) : [];
   S.tx = (Array.isArray(tx) ? tx : []).map(t => ({ ...t, amount: Number(t.amount) || 0 }));
   S.fixed = Array.isArray(fixed) ? fixed : [];
   S.cats = Array.isArray(cats) ? cats : [];
@@ -860,6 +895,83 @@ async function saveReview(keepEtc) {
   } catch (e) { toast('저장 실패: ' + e.message); renderReview(); }
 }
 
+// ─── 렌더: 통장별 잔액 ───────────────────────────────────────
+const AS_ORDER = ['카카오뱅크', '신한은행', '토스뱅크', '토스증권', '새마을금고', '청약', '주식', '퇴직연금 (IRP)', '전세 보증금', '기타'];
+function assetGroup(a) {
+  if (a.type === '퇴직연금') return '퇴직연금 (IRP)';
+  if (a.type === '전세') return '전세 보증금';
+  if (a.type === '국내주식' || a.type === '해외주식') return '주식';
+  for (const b of ['카카오뱅크', '신한', '토스뱅크', '토스증권', '새마을금고']) if (a.name.includes(b)) return b === '신한' ? '신한은행' : b;
+  if (/청약/.test(a.name)) return '청약';
+  return '기타';
+}
+function assetList() {   // 같은 이름이 두 번 저장된 경우 먼저 만든 것만
+  const seen = new Set();
+  return (S.assets || []).filter(a => a.status !== '해지').sort((a, b) => a.id - b.id).filter(a => !seen.has(a.name) && seen.add(a.name));
+}
+const assetStamp = a => { const m = String(a.memo || '').match(/\[(문자|직접) ([^\]]+)\]$/); return m ? `${m[1] === '문자' ? '문자' : '직접 입력'} ${m[2]} 반영` : ''; };
+const assetMemo = a => String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]$/, '').replace(/\s*\([^)]*·[^)]*\)$/, '');
+function assetTotals() {
+  const list = assetList();
+  const sum = f => list.filter(f).reduce((s, a) => s + a.amount, 0);
+  return {
+    list, total: sum(() => true),
+    cash: sum(a => a.type === '현금'),
+    save: sum(a => a.type === '적금'),
+    invest: sum(a => ['국내주식', '해외주식', '퇴직연금'].includes(a.type)),
+  };
+}
+function renderAssetsCard() {
+  const t = assetTotals();
+  $('#h-assets').textContent = W(t.total);
+  const banks = {};
+  t.list.filter(a => a.type === '현금').forEach(a => { const g = assetGroup(a); banks[g] = (banks[g] || 0) + a.amount; });
+  $('#h-assets-sub').textContent = Object.entries(banks).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g, v]) => `${g} ${short(v)}`).join(' · ');
+}
+function renderAssets() {
+  const t = assetTotals();
+  $('#as-total').textContent = W(t.total);
+  $('#as-cash').textContent = short(t.cash);
+  $('#as-save').textContent = short(t.save);
+  $('#as-invest').textContent = short(t.invest);
+  const groups = {};
+  t.list.forEach(a => { (groups[assetGroup(a)] = groups[assetGroup(a)] || []).push(a); });
+  $('#as-list').innerHTML = AS_ORDER.filter(g => groups[g]).map(g => {
+    const items = groups[g].sort((a, b) => b.amount - a.amount);
+    return `<div class="card"><h2>${esc(g)} <span class="num" style="color:var(--text)">${W(items.reduce((s, a) => s + a.amount, 0))}</span></h2>${items.map(a => {
+      const st = assetStamp(a), memo = assetMemo(a);
+      const sub = [a.status === '만기완료' ? '만기 완료' : '', a.rate > 0 ? `연 ${a.rate}%` : '', a.maturity ? `만기 ${a.maturity}` : '', memo && !/^연 [\d.]+%$/.test(memo) && !/^만기 ?완료/.test(memo) ? memo : ''].filter(Boolean).join(' · ');
+      return `<button class="row" data-asset="${a.id}"><span class="grow"><span class="t1" style="display:block">${esc(a.name.replace(/^(카카오뱅크|신한은행|신한|토스뱅크|토스증권) ?/, '') || a.name)}</span>
+        <span class="t2" style="display:block">${esc(sub)}</span>${st ? `<span class="fx-st paid" style="display:block">✓ ${esc(st)}</span>` : ''}</span>
+        <span class="amt-col"><span class="amt num">${W(a.amount)}</span></span></button>`;
+    }).join('')}</div>`;
+  }).join('') || '<div class="empty">자산이 없어요</div>';
+}
+function openAsset(id) {
+  const a = (S.assets || []).find(x => x.id === id);
+  if (!a) return;
+  S.edit.asset = id;
+  $('#sh-asset-title').textContent = a.name;
+  $('#a-amount').value = a.amount.toLocaleString('ko-KR');
+  const st = assetStamp(a);
+  $('#a-hint').textContent = st ? `마지막 반영: ${st}` : '';
+  openSheet('#sh-asset');
+  setTimeout(() => $('#a-amount').select(), 250);
+}
+async function saveAsset() {
+  const a = (S.assets || []).find(x => x.id === S.edit.asset);
+  if (!a) return;
+  const amount = digits($('#a-amount').value);
+  const d = new Date(), stamp = `[직접 ${d.getMonth() + 1}/${d.getDate()}]`;
+  const memo = (String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]$/, '') + ' ' + stamp).trim();
+  try {
+    // 같은 이름으로 두 번 저장된 자산도 함께 맞춥니다
+    const same = S.assets.filter(x => x.name === a.name);
+    await Promise.all(same.map(x => api('assets', { method: 'PATCH', body: { id: x.id, amount, memo: (String(x.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]$/, '') + ' ' + stamp).trim() } }).then(() => { x.amount = amount; x.memo = memo; })));
+    closeSheets(); render(); toast('저장했어요');
+  } catch (e) { toast('저장 실패: ' + e.message); }
+}
+
 // ─── 화면 전환 ───────────────────────────────────────────────
 function render() {
   _fxCache.clear();
@@ -871,6 +983,8 @@ function render() {
   if (S.tab === 'fixed') renderFixed();
   if (S.tab === 'more') renderMore();
   if (S.tab === 'review') renderReview();
+  if (S.tab === 'assets') renderAssets();
+  if (S.tab === 'home') renderAssetsCard();
   const n = reviewAll().length, badge = $('#rv-badge');
   badge.textContent = n > 99 ? '99+' : n;
   badge.classList.toggle('hidden', !n);
@@ -879,7 +993,7 @@ function go(tab) {
   S.tab = tab;
   $$('[data-view]').forEach(v => v.classList.toggle('hidden', v.id !== 'v-' + tab));
   $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-  $('#fab').classList.toggle('hidden', tab === 'more' || tab === 'fixed' || tab === 'review');
+  $('#fab').classList.toggle('hidden', ['more', 'fixed', 'review', 'assets'].includes(tab));
   window.scrollTo(0, 0);
   render();
 }
@@ -1051,11 +1165,12 @@ $('#lock-form').addEventListener('submit', e => { e.preventDefault(); const v = 
 $('#logout').addEventListener('click', () => { if (confirm('이 기기에서 비밀번호를 지울까요?')) { setToken(''); showLock(false); } });
 $$('.tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-cycle],[data-go],[data-tx],[data-fx],[data-cat],[data-catgo],[data-day],[data-close],[data-search]');
+  const t = e.target.closest('[data-cycle],[data-go],[data-tx],[data-fx],[data-cat],[data-catgo],[data-day],[data-close],[data-search],[data-asset]');
   if (!t) return;
   if (t.dataset.cycle && !t.disabled) { S.cycle = ymShift(S.cycle, +t.dataset.cycle); S.calSel = null; render(); }
   else if (t.dataset.go) go(t.dataset.go);
   else if (t.dataset.tx) openTx(+t.dataset.tx);
+  else if (t.dataset.asset) openAsset(+t.dataset.asset);
   else if (t.dataset.fx) openFx(+t.dataset.fx);
   else if (t.dataset.cat) openCat(+t.dataset.cat);
   else if (t.dataset.search) { S.txCats.clear(); S.txType = ''; S.txView = 'list'; $('#tx-search').value = t.dataset.search; go('tx'); }
@@ -1081,8 +1196,9 @@ $('#cat-add').addEventListener('click', () => openCat(null));
 $('#cat-type').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; S.catType = b.dataset.t; renderMore(); });
 $('#c-colors').addEventListener('click', e => { const b = e.target.closest('[data-col]'); if (!b) return; catColorDraft = b.dataset.col; $$('#c-colors button').forEach(x => x.classList.toggle('on', x === b)); });
 $('#c-save').addEventListener('click', saveCat);
+$('#a-save').addEventListener('click', saveAsset);
 $('#c-del').addEventListener('click', deleteCat);
-amountInput($('#t-amount')); amountInput($('#f-amount')); amountInput($('#f-actual'));
+amountInput($('#t-amount')); amountInput($('#f-amount')); amountInput($('#a-amount')); amountInput($('#f-actual'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
 // 앱으로 돌아오면 새 내역(문자 자동 기록)을 다시 불러옵니다
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && getToken() && !$('#app').classList.contains('hidden')) { try { await loadAll(); render(); } catch (e) {} } });
