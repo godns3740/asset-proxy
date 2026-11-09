@@ -896,12 +896,14 @@ async function saveReview(keepEtc) {
 }
 
 // ─── 렌더: 통장별 잔액 ───────────────────────────────────────
-const AS_ORDER = ['카카오뱅크', '신한은행', '토스뱅크', '토스증권', '새마을금고', '청약', '주식', '퇴직연금 (IRP)', '전세 보증금', '기타'];
+const AS_ORDER = ['카카오뱅크', '신한은행', '토스뱅크', '새마을금고', '청약', '주식', '토스증권', '카카오페이증권', '퇴직연금 (IRP)', '전세 보증금', '기타', '모임통장 (합계 제외)'];
+const isShared = a => /합계 제외/.test(a.memo || '');
 function assetGroup(a) {
+  if (isShared(a)) return '모임통장 (합계 제외)';
   if (a.type === '퇴직연금') return '퇴직연금 (IRP)';
   if (a.type === '전세') return '전세 보증금';
   if (a.type === '국내주식' || a.type === '해외주식') return '주식';
-  for (const b of ['카카오뱅크', '신한', '토스뱅크', '토스증권', '새마을금고']) if (a.name.includes(b)) return b === '신한' ? '신한은행' : b;
+  for (const b of ['카카오페이증권', '카카오뱅크', '신한', '토스뱅크', '토스증권', '새마을금고']) if (a.name.includes(b)) return b === '신한' ? '신한은행' : b;
   if (/청약/.test(a.name)) return '청약';
   return '기타';
 }
@@ -912,13 +914,13 @@ function assetList() {   // 같은 이름이 두 번 저장된 경우 먼저 만
 const assetStamp = a => { const m = String(a.memo || '').match(/\[(문자|직접) ([^\]]+)\]$/); return m ? `${m[1] === '문자' ? '문자' : '직접 입력'} ${m[2]} 반영` : ''; };
 const assetMemo = a => String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]$/, '').replace(/\s*\([^)]*·[^)]*\)$/, '');
 function assetTotals() {
-  const list = assetList();
+  const all = assetList(), list = all.filter(a => !isShared(a));
   const sum = f => list.filter(f).reduce((s, a) => s + a.amount, 0);
   return {
-    list, total: sum(() => true),
+    list, all, total: sum(() => true),
     cash: sum(a => a.type === '현금'),
     save: sum(a => a.type === '적금'),
-    invest: sum(a => ['국내주식', '해외주식', '퇴직연금'].includes(a.type)),
+    invest: sum(a => ['국내주식', '해외주식', '퇴직연금'].includes(a.type) || /증권/.test(a.name)),
   };
 }
 function renderAssetsCard() {
@@ -935,12 +937,12 @@ function renderAssets() {
   $('#as-save').textContent = short(t.save);
   $('#as-invest').textContent = short(t.invest);
   const groups = {};
-  t.list.forEach(a => { (groups[assetGroup(a)] = groups[assetGroup(a)] || []).push(a); });
+  t.all.forEach(a => { (groups[assetGroup(a)] = groups[assetGroup(a)] || []).push(a); });
   $('#as-list').innerHTML = AS_ORDER.filter(g => groups[g]).map(g => {
     const items = groups[g].sort((a, b) => b.amount - a.amount);
-    return `<div class="card"><h2>${esc(g)} <span class="num" style="color:var(--text)">${W(items.reduce((s, a) => s + a.amount, 0))}</span></h2>${items.map(a => {
+    return `<div class="card"${g.includes('합계 제외') ? ' style="opacity:.8"' : ''}><h2>${esc(g)} <span class="num" style="color:var(--text)">${W(items.reduce((s, a) => s + a.amount, 0))}</span></h2>${items.map(a => {
       const st = assetStamp(a), memo = assetMemo(a);
-      const sub = [a.status === '만기완료' ? '만기 완료' : '', a.rate > 0 ? `연 ${a.rate}%` : '', a.maturity ? `만기 ${a.maturity}` : '', memo && !/^연 [\d.]+%$/.test(memo) && !/^만기 ?완료/.test(memo) ? memo : ''].filter(Boolean).join(' · ');
+      const sub = [a.status === '만기완료' ? '만기 완료' : '', a.rate > 0 ? `연 ${a.rate}%` : '', a.maturity ? `만기 ${a.maturity}` : '', memo && !/^연 [\d.]+%$/.test(memo) && !/^만기 ?완료/.test(memo) && !isShared(a) ? memo : ''].filter(Boolean).join(' · ');
       return `<button class="row" data-asset="${a.id}"><span class="grow"><span class="t1" style="display:block">${esc(a.name.replace(/^(카카오뱅크|신한은행|신한|토스뱅크|토스증권) ?/, '') || a.name)}</span>
         <span class="t2" style="display:block">${esc(sub)}</span>${st ? `<span class="fx-st paid" style="display:block">✓ ${esc(st)}</span>` : ''}</span>
         <span class="amt-col"><span class="amt num">${W(a.amount)}</span></span></button>`;
