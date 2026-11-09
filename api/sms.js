@@ -20,6 +20,7 @@ const FIXED_ALIASES = [
   [/클로드|claude/i, /ANTHROPIC|CLAUDE/i],
   [/넷플릭스/, /NETFLIX|넷플릭스/i],
   [/icloud|아이클라우드/i, /APPLE|ICLOUD/i],
+  [/capcut|캡컷/i, /APPLE|CAPCUT/i],
   [/티빙/, /TVING|티빙/i],
   [/노션/, /NOTION|노션/i],
   [/이모티콘/, /이모티콘/],
@@ -33,14 +34,16 @@ function guessPayment(p, ruleCategory, fixedHit) {
   if (personLike && ruleCategory === '기타') return '계좌이체';        // 사람에게 보낸 돈
   return '체크카드';                                                 // 가게 이름 → 카드 결제
 }
-function matchFixed(merchant, list) {
+function matchFixed(merchant, list, amount) {
   const m = norm(merchant);
-  return list.find(f => {
+  const hits = list.filter(f => {
     if (f.is_active === false) return false;
     const n = norm(f.name);
     if (n.length >= 2 && (m.includes(n) || (m.length >= 2 && n.includes(m)))) return true;
-    return FIXED_ALIASES.some(([fixedRe, smsRe]) => fixedRe.test(f.name) && smsRe.test(merchant));
-  }) || null;
+    return FIXED_ALIASES.some(([fixedRe, smsRe]) => fixedRe.test(f.name) && (smsRe.test(merchant) || fixedRe.test(merchant)));
+  });
+  // 여러 개가 걸리면 금액이 가장 비슷한 것 (예: 앱스토어 → iCloud / CapCut)
+  return hits.sort((a, b) => Math.abs(Number(a.amount) - amount) - Math.abs(Number(b.amount) - amount))[0] || null;
 }
 
 export default async function handler(req, res) {
@@ -60,13 +63,13 @@ export default async function handler(req, res) {
   try {
     const [cr, fr] = await Promise.all([
       fetch(`${base}/categories?select=name,type`, { headers: headers() }),
-      fetch(`${base}/fixed_expenses?select=name,category,is_active`, { headers: headers() }),
+      fetch(`${base}/fixed_expenses?select=name,category,is_active,amount`, { headers: headers() }),
     ]);
     const cats = await cr.json();
     const fixedList = await fr.json().catch(() => []);
     const names = Array.isArray(cats) ? cats.filter(c => c.type === p.type).map(c => c.name) : [];
     // 고정지출 목록의 이름과 겹치는 출금이면 고정지출로 표시 (변동지출 합계에서 빠짐)
-    const fixedHit = p.type === '지출' ? matchFixed(p.merchant, Array.isArray(fixedList) ? fixedList : []) : null;
+    const fixedHit = p.type === '지출' ? matchFixed(p.merchant, Array.isArray(fixedList) ? fixedList : [], p.amount) : null;
     let category = pickCategory(p.merchant, p.type, names, p.time);
     const ruleCategory = category;
     if (fixedHit && fixedHit.category && names.includes(fixedHit.category)) category = fixedHit.category;
