@@ -3,6 +3,7 @@ const KIS_APP_KEY = process.env.KIS_APP_KEY;
 const KIS_APP_SECRET = process.env.KIS_APP_SECRET;
 const KIS_BASE = 'https://openapi.koreainvestment.com:9443';
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 let cachedToken = null;
 let tokenExpiry = 0;
 
@@ -91,22 +92,27 @@ export default async function handler(req, res) {
           if (q) result[sym] = q;
         } else {
           const code = sym.replace('.KS', '');
-          const r = await fetch(
-            `${KIS_BASE}/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${code}`,
-            {
-              headers: {
-                'authorization': `Bearer ${token}`,
-                'appkey': KIS_APP_KEY,
-                'appsecret': KIS_APP_SECRET,
-                'tr_id': 'FHKST01010100',
-                'custtype': 'P',
-              },
-            }
-          );
-          const data = await r.json();
-          const price = parseInt(data?.output?.stck_prpr);
-          const name = data?.output?.hts_kor_isnm || KR_NAME_MAP[code] || code;
-          if (price && price > 0) result[sym] = { price, currency: 'KRW', name, type: 'realtime' };
+          // 한국투자증권은 초당 호출 수 제한이 있어서, 실패하면 잠깐 쉬었다가 다시 시도합니다
+          for (let attempt = 0; attempt < 3 && !result[sym]; attempt++) {
+            if (attempt) await sleep(400 * attempt);
+            const r = await fetch(
+              `${KIS_BASE}/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${code}`,
+              {
+                headers: {
+                  'authorization': `Bearer ${token}`,
+                  'appkey': KIS_APP_KEY,
+                  'appsecret': KIS_APP_SECRET,
+                  'tr_id': 'FHKST01010100',
+                  'custtype': 'P',
+                },
+              }
+            );
+            const data = await r.json().catch(() => null);
+            const price = parseInt(data?.output?.stck_prpr);
+            const name = data?.output?.hts_kor_isnm || KR_NAME_MAP[code] || code;
+            if (price && price > 0) result[sym] = { price, currency: 'KRW', name, type: 'realtime' };
+          }
+          await sleep(120);
         }
       } catch(e) {
         console.error(sym, e.message);

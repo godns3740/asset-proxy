@@ -258,7 +258,7 @@ input,select{font:inherit;color:var(--text)}
 
     <!-- ASSETS -->
     <section id="v-assets" data-view class="hidden">
-      <div class="top"><h1>내 돈은 어디에</h1><button class="btn small ghost" data-go="home">닫기</button></div>
+      <div class="top"><h1>내 돈은 어디에</h1><div style="display:flex;gap:6px"><button class="btn small ghost" id="as-refresh">시세 ↻</button><button class="btn small ghost" data-go="home">닫기</button></div></div>
       <div class="card hero">
         <div class="label">전체</div>
         <div class="big num" id="as-total">—</div>
@@ -268,7 +268,7 @@ input,select{font:inherit;color:var(--text)}
           <div class="stat"><div class="k">투자·연금</div><div class="v num" id="as-invest">—</div></div>
         </div>
       </div>
-      <div class="sub" style="font-size:12px;margin:0 2px 10px">카카오뱅크·신한·세이프박스는 문자가 올 때마다 잔액이 자동으로 맞춰져요. 나머지는 눌러서 고쳐 주세요.</div>
+      <div class="sub" style="font-size:12px;margin:0 2px 10px">카카오뱅크·신한·세이프박스는 문자가 올 때마다, 주식은 화면을 열 때(10분마다) 자동으로 맞춰져요. 나머지는 눌러서 고쳐 주세요.</div>
       <div id="as-list"></div>
     </section>
 
@@ -896,13 +896,13 @@ async function saveReview(keepEtc) {
 }
 
 // ─── 렌더: 통장별 잔액 ───────────────────────────────────────
-const AS_ORDER = ['카카오뱅크', '신한은행', '토스뱅크', '새마을금고', '청약', '주식', '토스증권', '카카오페이증권', '퇴직연금 (IRP)', '전세 보증금', '기타', '모임통장 (합계 제외)'];
+const AS_ORDER = ['카카오뱅크', '신한은행', '토스뱅크', '새마을금고', '청약', '토스증권', '카카오페이증권', '퇴직연금 (IRP)', '전세 보증금', '기타', '모임통장 (합계 제외)'];
 const isShared = a => /합계 제외/.test(a.memo || '');
 function assetGroup(a) {
   if (isShared(a)) return '모임통장 (합계 제외)';
   if (a.type === '퇴직연금') return '퇴직연금 (IRP)';
   if (a.type === '전세') return '전세 보증금';
-  if (a.type === '국내주식' || a.type === '해외주식') return '주식';
+  if (a.type === '국내주식' || a.type === '해외주식') return /카카오페이증권/.test(a.memo || '') ? '카카오페이증권' : '토스증권';
   for (const b of ['카카오페이증권', '카카오뱅크', '신한', '토스뱅크', '토스증권', '새마을금고']) if (a.name.includes(b)) return b === '신한' ? '신한은행' : b;
   if (/청약/.test(a.name)) return '청약';
   return '기타';
@@ -911,14 +911,15 @@ function assetList() {   // 같은 이름이 두 번 저장된 경우 먼저 만
   const seen = new Set();
   return (S.assets || []).filter(a => a.status !== '해지').sort((a, b) => a.id - b.id).filter(a => !seen.has(a.name) && seen.add(a.name));
 }
-const assetStamp = a => { const m = String(a.memo || '').match(/\[(문자|직접) ([^\]|]+)[^\]]*\]\s*$/); return m ? `${m[1] === '문자' ? '문자' : '직접 입력'} ${m[2]} 반영` : ''; };
-const assetMemo = a => String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]/g, '').replace(/\s*\([^)]*·[^)]*\)$/, '').trim();
+const STAMP_RE = /\s*\[(문자|직접|시세) [^\]]*\]/g;
+const assetStamp = a => { const m = String(a.memo || '').match(/\[(문자|직접|시세) ([^\]|]+)[^\]]*\]\s*$/); return m ? `${m[1] === '직접' ? '직접 입력' : m[1]} ${m[2]} 반영` : ''; };
+const assetMemo = a => String(a.memo || '').replace(STAMP_RE, '').replace(/\s*\([^)]*·[^)]*\)$/, '').trim();
 function assetTotals() {
   const all = assetList(), list = all.filter(a => !isShared(a));
   const sum = f => list.filter(f).reduce((s, a) => s + a.amount, 0);
   return {
     list, all, total: sum(() => true),
-    cash: sum(a => a.type === '현금'),
+    cash: sum(a => a.type === '현금' && !/증권/.test(a.name)),
     save: sum(a => a.type === '적금'),
     invest: sum(a => ['국내주식', '해외주식', '퇴직연금'].includes(a.type) || /증권/.test(a.name)),
   };
@@ -949,6 +950,39 @@ function renderAssets() {
     }).join('')}</div>`;
   }).join('') || '<div class="empty">자산이 없어요</div>';
 }
+// ─── 주가 자동 갱신 ─────────────────────────────────────────
+const TICKERS = { '삼성전자': '005930.KS', 'SK하이닉스': '000660.KS', '카카오뱅크': '323410.KS', '대한전선': '001440.KS', 'KODEX 200': '069500.KS', '테슬라 TSLA': 'TSLA', '클릭홀딩스 CLIK': 'CLIK', '나이키 NKE': 'NKE' };
+const PRICE_KEY = 'gw_price_at';
+let priceBusy = false;
+async function refreshPrices(force) {
+  const qtyOf = a => { const m = String(a.memo || '').match(/([\d.]+)\s*주/); return m ? parseFloat(m[1]) : 0; };
+  const stocks = (S.assets || []).filter(a => ['국내주식', '해외주식'].includes(a.type) && TICKERS[a.name] && qtyOf(a) > 0);
+  if (!stocks.length || priceBusy) return;
+  let last = 0; try { last = +localStorage.getItem(PRICE_KEY) || 0; } catch (e) {}
+  if (!force && Date.now() - last < 10 * 60 * 1000) return;
+  priceBusy = true;
+  try { localStorage.setItem(PRICE_KEY, String(Date.now())); } catch (e) {}
+  const btn = $('#as-refresh'); if (btn) btn.disabled = true;
+  try {
+    const syms = [...new Set(stocks.map(a => TICKERS[a.name]))];
+    const [fx, q] = await Promise.all([api('fx').catch(() => null), api('quote?symbols=' + encodeURIComponent(syms.join(',')))]);
+    const rate = fx && fx.USDKRW && fx.source && fx.source !== 'fallback' ? Number(fx.USDKRW) : null;   // 환율을 못 받으면 해외주식은 그대로
+    const d = new Date(), stamp = `[시세 ${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}]`;
+    let n = 0;
+    await Promise.all(stocks.map(async a => {
+      const p = q && q[TICKERS[a.name]];
+      if (!p || !p.price || (p.currency === 'USD' && !rate)) return;
+      const amount = Math.round(p.price * qtyOf(a) * (p.currency === 'USD' ? rate : 1));
+      const memo = (String(a.memo || '').replace(STAMP_RE, '').replace(/\s*\([^)]*·[^)]*\)$/, '') + ' ' + stamp).trim();
+      await api('assets', { method: 'PATCH', body: { id: a.id, amount, memo } });
+      a.amount = amount; a.memo = memo; n++;
+    }));
+    if (force) toast(n ? `${n}종목 시세 반영${rate ? ` · 환율 ${Math.round(rate).toLocaleString('ko-KR')}원` : ''}` : '시세를 받아오지 못했어요');
+    if (n) render();
+  } catch (e) { if (force) toast('시세 갱신 실패: ' + e.message); }
+  finally { priceBusy = false; if (btn) btn.disabled = false; }
+}
+
 function openAsset(id) {
   const a = (S.assets || []).find(x => x.id === id);
   if (!a) return;
@@ -965,11 +999,11 @@ async function saveAsset() {
   if (!a) return;
   const amount = digits($('#a-amount').value);
   const d = new Date(), stamp = `[직접 ${d.getMonth() + 1}/${d.getDate()}]`;
-  const memo = (String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]/g, '') + ' ' + stamp).trim();
+  const memo = (String(a.memo || '').replace(STAMP_RE, '') + ' ' + stamp).trim();
   try {
     // 같은 이름으로 두 번 저장된 자산도 함께 맞춥니다
     const same = S.assets.filter(x => x.name === a.name);
-    await Promise.all(same.map(x => api('assets', { method: 'PATCH', body: { id: x.id, amount, memo: (String(x.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]/g, '') + ' ' + stamp).trim() } }).then(() => { x.amount = amount; x.memo = memo; })));
+    await Promise.all(same.map(x => api('assets', { method: 'PATCH', body: { id: x.id, amount, memo: (String(x.memo || '').replace(STAMP_RE, '') + ' ' + stamp).trim() } }).then(() => { x.amount = amount; x.memo = memo; })));
     closeSheets(); render(); toast('저장했어요');
   } catch (e) { toast('저장 실패: ' + e.message); }
 }
@@ -985,7 +1019,7 @@ function render() {
   if (S.tab === 'fixed') renderFixed();
   if (S.tab === 'more') renderMore();
   if (S.tab === 'review') renderReview();
-  if (S.tab === 'assets') renderAssets();
+  if (S.tab === 'assets') { renderAssets(); refreshPrices(false); }
   if (S.tab === 'home') renderAssetsCard();
   const n = reviewAll().length, badge = $('#rv-badge');
   badge.textContent = n > 99 ? '99+' : n;
@@ -1158,7 +1192,7 @@ async function boot() {
   $('#lock').classList.add('hidden');
   $('#app').classList.remove('hidden');
   $('#v-home').insertAdjacentHTML('afterbegin', '<div class="loading" id="boot-loading">불러오는 중…</div>');
-  try { await loadAll(); $('#boot-loading')?.remove(); go(S.tab); }
+  try { await loadAll(); $('#boot-loading')?.remove(); go(S.tab); refreshPrices(false); }
   catch (e) { $('#boot-loading')?.remove(); if (e.message !== 'unauthorized') toast('불러오기 실패: ' + e.message); }
 }
 
@@ -1199,6 +1233,7 @@ $('#cat-type').addEventListener('click', e => { const b = e.target.closest('[dat
 $('#c-colors').addEventListener('click', e => { const b = e.target.closest('[data-col]'); if (!b) return; catColorDraft = b.dataset.col; $$('#c-colors button').forEach(x => x.classList.toggle('on', x === b)); });
 $('#c-save').addEventListener('click', saveCat);
 $('#a-save').addEventListener('click', saveAsset);
+$('#as-refresh').addEventListener('click', () => refreshPrices(true));
 $('#c-del').addEventListener('click', deleteCat);
 amountInput($('#t-amount')); amountInput($('#f-amount')); amountInput($('#a-amount')); amountInput($('#f-actual'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
