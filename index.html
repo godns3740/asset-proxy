@@ -911,8 +911,8 @@ function assetList() {   // 같은 이름이 두 번 저장된 경우 먼저 만
   const seen = new Set();
   return (S.assets || []).filter(a => a.status !== '해지').sort((a, b) => a.id - b.id).filter(a => !seen.has(a.name) && seen.add(a.name));
 }
-const assetStamp = a => { const m = String(a.memo || '').match(/\[(문자|직접) ([^\]]+)\]$/); return m ? `${m[1] === '문자' ? '문자' : '직접 입력'} ${m[2]} 반영` : ''; };
-const assetMemo = a => String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]$/, '').replace(/\s*\([^)]*·[^)]*\)$/, '');
+const assetStamp = a => { const m = String(a.memo || '').match(/\[(문자|직접) ([^\]|]+)[^\]]*\]\s*$/); return m ? `${m[1] === '문자' ? '문자' : '직접 입력'} ${m[2]} 반영` : ''; };
+const assetMemo = a => String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]/g, '').replace(/\s*\([^)]*·[^)]*\)$/, '').trim();
 function assetTotals() {
   const all = assetList(), list = all.filter(a => !isShared(a));
   const sum = f => list.filter(f).reduce((s, a) => s + a.amount, 0);
@@ -965,11 +965,11 @@ async function saveAsset() {
   if (!a) return;
   const amount = digits($('#a-amount').value);
   const d = new Date(), stamp = `[직접 ${d.getMonth() + 1}/${d.getDate()}]`;
-  const memo = (String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]$/, '') + ' ' + stamp).trim();
+  const memo = (String(a.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]/g, '') + ' ' + stamp).trim();
   try {
     // 같은 이름으로 두 번 저장된 자산도 함께 맞춥니다
     const same = S.assets.filter(x => x.name === a.name);
-    await Promise.all(same.map(x => api('assets', { method: 'PATCH', body: { id: x.id, amount, memo: (String(x.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]$/, '') + ' ' + stamp).trim() } }).then(() => { x.amount = amount; x.memo = memo; })));
+    await Promise.all(same.map(x => api('assets', { method: 'PATCH', body: { id: x.id, amount, memo: (String(x.memo || '').replace(/\s*\[(문자|직접) [^\]]*\]/g, '') + ' ' + stamp).trim() } }).then(() => { x.amount = amount; x.memo = memo; })));
     closeSheets(); render(); toast('저장했어요');
   } catch (e) { toast('저장 실패: ' + e.message); }
 }
