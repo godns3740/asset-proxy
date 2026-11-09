@@ -25,6 +25,14 @@ const FIXED_ALIASES = [
   [/이모티콘/, /이모티콘/],
   [/인터넷/, /인터넷|SK브로드밴드|KT|LG유플러스/i],
 ];
+// 카카오뱅크는 체크카드 결제도 "출금"으로 보내서, 받는 쪽 이름으로 결제수단을 추정합니다
+function guessPayment(p, ruleCategory, fixedHit) {
+  if (p.type !== '지출' || p.payment !== '계좌이체' || p.kind !== '출금') return p.payment;
+  if (fixedHit) return '계좌이체';                                   // 자동이체로 나가는 고정지출
+  const personLike = /^간편이체/.test(p.merchant) || /^[가-힣]{2,4}$/.test(p.merchant);
+  if (personLike && ruleCategory === '기타') return '계좌이체';        // 사람에게 보낸 돈
+  return '체크카드';                                                 // 가게 이름 → 카드 결제
+}
 function matchFixed(merchant, list) {
   const m = norm(merchant);
   return list.find(f => {
@@ -60,6 +68,7 @@ export default async function handler(req, res) {
     // 고정지출 목록의 이름과 겹치는 출금이면 고정지출로 표시 (변동지출 합계에서 빠짐)
     const fixedHit = p.type === '지출' ? matchFixed(p.merchant, Array.isArray(fixedList) ? fixedList : []) : null;
     let category = pickCategory(p.merchant, p.type, names, p.time);
+    const ruleCategory = category;
     if (fixedHit && fixedHit.category && names.includes(fixedHit.category)) category = fixedHit.category;
     // 자동 분류가 안 되면, 예전에 같은 가게·사람을 직접 정리한 카테고리를 따릅니다
     if (!fixedHit && (category === '기타' || category === '기타수입') && p.merchant.length >= 2 && !/^토스페이|ATM|현금/i.test(p.merchant)) {
@@ -69,7 +78,7 @@ export default async function handler(req, res) {
       if (Array.isArray(learned) && learned[0] && names.includes(learned[0].category)) category = learned[0].category;
     }
     const memo = p.time ? `${p.merchant} · ${p.time}` : p.merchant;
-    const tx = { date: p.date, type: p.type, category, payment: p.payment, memo, amount: p.amount, is_fixed: !!fixedHit };
+    const tx = { date: p.date, type: p.type, category, payment: guessPayment(p, ruleCategory, fixedHit), memo, amount: p.amount, is_fixed: !!fixedHit };
 
     if (req.query?.dryRun) return res.status(200).json({ ok: true, dryRun: true, parsed: p, transaction: tx });
 
