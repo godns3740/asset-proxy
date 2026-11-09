@@ -26,6 +26,33 @@ const FIXED_ALIASES = [
   [/이모티콘/, /이모티콘/],
   [/인터넷/, /인터넷|SK브로드밴드|KT|LG유플러스/i],
 ];
+// ─── 통장 잔액 맞추기 ───────────────────────────────────────
+// 문자를 보내는 통장 → 자산 목록의 이름
+const ASSET_FOR_BANK = { '카카오뱅크': '카카오뱅크 주거래', '신한': '신한은행 통장' };
+const SAFEBOX_ASSET = '카카오뱅크 세이프박스';
+async function syncBalances(base, p) {
+  const enc = s => encodeURIComponent(s);
+  const stamp = `[문자 ${p.date.slice(5).replace('-', '/')}${p.time ? ' ' + p.time : ''}]`;
+  const done = [];
+  const update = async (name, fn) => {
+    const r = await fetch(`${base}/assets?select=id,amount,memo&name=eq.${enc(name)}`, { headers: headers() });
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return;
+    let shown = null;
+    await Promise.all(rows.map(a => {
+      const memo = String(a.memo || '');
+      if (memo.includes(stamp)) return null;   // 같은 문자를 두 번 받으면 한 번만 반영
+      const amount = fn(Number(a.amount));
+      if (shown === null) shown = amount;
+      return fetch(`${base}/assets?id=eq.${a.id}`, { method: 'PATCH', headers: headers(), body: JSON.stringify({ amount, memo: (memo.replace(/\s*\[문자 [^\]]*\]$/, '') + ' ' + stamp).trim() }) });
+    }));
+    if (shown !== null) done.push(`${name.replace(/^카카오뱅크 /, '')} 잔액 ${won(shown)}`);
+  };
+  if (p.balance !== null && ASSET_FOR_BANK[p.bank]) await update(ASSET_FOR_BANK[p.bank], () => p.balance);
+  if (p.isSafebox && p.bank === '카카오뱅크') await update(SAFEBOX_ASSET, v => Math.max(0, v + (p.kind === '출금' ? p.amount : -p.amount)));
+  return done;
+}
+
 // 카카오뱅크는 체크카드 결제도 "출금"으로 보내서, 받는 쪽 이름으로 결제수단을 추정합니다
 function guessPayment(p, ruleCategory, fixedHit) {
   if (p.type !== '지출' || p.payment !== '계좌이체' || p.kind !== '출금') return p.payment;
@@ -87,9 +114,14 @@ export default async function handler(req, res) {
 
     const q = s => encodeURIComponent(s);
 
+    // 문자에 찍힌 잔액으로 통장 잔액을 맞춥니다 (실패해도 기록은 계속)
+    const synced = await syncBalances(base, p).catch(() => []);
+    const syncMsg = synced.length ? ` · ${synced.join(', ')}` : '';
+
     // 내 계좌끼리 옮긴 돈은 수입/지출이 아니므로 기록하지 않습니다.
     if (p.isSelfTransfer) {
-      return res.status(200).json({ ok: true, ignored: true, message: `내 계좌 이체라 기록 안 함: ${p.merchant} ${won(p.amount)}` });
+      const what = p.isSafebox ? (p.kind === '출금' ? '세이프박스에 넣음' : '세이프박스에서 꺼냄') : '내 계좌 이체';
+      return res.status(200).json({ ok: true, ignored: true, message: `${what} ${won(p.amount)} · 기록 안 함${syncMsg}` });
     }
 
     // 결제 취소: 같은 가맹점·금액의 최근 지출을 지웁니다.
@@ -114,7 +146,7 @@ export default async function handler(req, res) {
     const saved = await ir.json();
     if (!ir.ok) return res.status(502).json({ ok: false, message: `저장 실패: ${saved?.message || ir.status}`, detail: saved });
     const sign = p.type === '수입' ? '+' : '-';
-    return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${tx.is_fixed ? '고정 ' : ''}${category} ${sign}${won(p.amount)} (${p.merchant})` });
+    return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${tx.is_fixed ? '고정 ' : ''}${category} ${sign}${won(p.amount)} (${p.merchant})${syncMsg}` });
   } catch (e) {
     return res.status(500).json({ ok: false, message: `서버 오류: ${e.message}` });
   }
