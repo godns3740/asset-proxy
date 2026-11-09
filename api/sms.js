@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 
   const body = req.body;
   const text = typeof body === 'string' ? body : (body?.text || body?.message || '');
-  const p = parseSms(text);
+  const p = parseSms(text, undefined, { ownerName: process.env.OWNER_NAME });
   if (!p.ok) return res.status(422).json({ ok: false, message: `기록 못 함: ${p.reason}` });
 
   const base = `${SUPABASE_URL}/rest/v1`;

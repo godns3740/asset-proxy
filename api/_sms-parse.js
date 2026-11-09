@@ -8,7 +8,8 @@
 // 간편이체(양성재)
 // 잔액 1,240,662원
 
-const AMOUNT_LINE = /(입금|출금|결제|승인|사용|취소)[^\d]*([\d,]+)\s*원|([\d,]+)\s*원[^\n]*?(입금|출금|결제|승인|사용|취소)/;
+// 카카오뱅크: "출금 9,400원" / 신한: "출금 20,000" (원 없음)
+const AMOUNT_LINE = /(입금|출금|결제|승인|사용|취소)[^\d]*([\d,]+)\s*원?|([\d,]+)\s*원[^\n]*?(입금|출금|결제|승인|사용|취소)/;
 
 function kstNow() {
   return new Date(Date.now() + 9 * 3600 * 1000); // UTC 필드로 읽으면 한국 시간
@@ -22,10 +23,10 @@ function resolveDate(mm, dd, now = kstNow()) {
   return `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
 }
 
-export function parseSms(text, now) {
+export function parseSms(text, now, opts = {}) {
   if (!text || typeof text !== 'string') return { ok: false, reason: '문자 내용이 비어 있어요' };
   const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-    .filter(s => !/^\[Web발신\]$/.test(s));
+    .filter(s => !/^\[Web\s*발신\]$/.test(s));
 
   const amtIdx = lines.findIndex(l => !/^잔액/.test(l) && AMOUNT_LINE.test(l));
   if (amtIdx === -1) return { ok: false, reason: '금액 줄을 찾지 못했어요' };
@@ -39,7 +40,7 @@ export function parseSms(text, now) {
   const time = dm ? `${dm[3].padStart(2, '0')}:${dm[4]}` : null;
 
   // 금액 다음 줄이 가맹점/상대방. 없으면 금액 줄에서 금액·종류를 뺀 나머지.
-  let merchant = lines.slice(amtIdx + 1).find(l => !/^잔액|^누적|^한도/.test(l));
+  let merchant = lines.slice(amtIdx + 1).find(l => !/^잔액|^누적|^한도|^[\d-]{8,}$/.test(l));
   if (!merchant) {
     merchant = lines[amtIdx].replace(AMOUNT_LINE, '').trim();
   }
@@ -57,7 +58,9 @@ export function parseSms(text, now) {
   const holderMask = holderLine ? holderLine.replace(/\(\d{3,4}\)$/, '') : null;
   // "간편이체(박규원)" → 박규원, "토뱅 박규원" → 박규원
   const counterparty = merchant.replace(/^[^(]*\((.+)\)$/, '$1').trim().split(/\s+/).pop();
-  const isSelfTransfer = !isCard && !!holderMask && isMaskMatch(holderMask, counterparty);
+  // 신한처럼 가려진 예금주 줄이 없는 은행은 설정한 본인 이름(OWNER_NAME)과 비교합니다
+  const owner = String(opts.ownerName || '').trim();
+  const isSelfTransfer = !isCard && ((!!holderMask && isMaskMatch(holderMask, counterparty)) || (!!owner && counterparty === owner));
 
   return { ok: true, kind, isCancel, type, amount, date, time, merchant, payment, isSelfTransfer };
 }
