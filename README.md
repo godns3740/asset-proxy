@@ -52,3 +52,15 @@ const PROXY_BASE_URL = 'https://asset-proxy-xxx.vercel.app';
 - 카카오뱅크: `323410.KS`
 - 대한전선: `001440.KS`
 - KODEX 200 ETF: `069500.KS`
+
+## 문자 자동 기록 (아이폰 단축어)
+
+카카오뱅크·신한 입출금 문자를 받으면 단축어가 `/api/sms`로 보내 거래내역에 저장합니다.
+
+- 단축어 → 자동화 → **메시지** → "메시지 포함": `잔액` (두 은행 문자에 모두 들어 있음) → 즉시 실행
+- 동작: `URL 콘텐츠 가져오기`
+  - URL: `https://asset-proxy-uhid.vercel.app/api/sms`, 방법 `POST`
+  - 헤더 `x-app-token`: 가계부 비밀번호
+  - 요청 본문 JSON: `text` = 단축어 입력 › 콘텐츠
+- 동작: `사전 값 가져오기`(키 `message`) → `시스템 알림 보기`
+- 신한처럼 예금주 이름이 가려지지 않는 은행은 Vercel 환경변수 `OWNER_NAME`(본인 이름)이 있어야 내 계좌끼리 이체를 걸러냅니다.
