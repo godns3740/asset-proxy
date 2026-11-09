@@ -347,6 +347,12 @@ input,select{font:inherit;color:var(--text)}
         <a class="link-row" href="/old/">내집마련 계산기 (예전 화면) <span>›</span></a>
       </div>
       <div class="card">
+        <h2>월급날 리포트</h2>
+        <div class="sub" style="font-size:13px;margin:-4px 0 10px">월급날 아침마다 지난 기간 결산을 PDF로 메일 보내 드려요.</div>
+        <button class="link-row" id="rp-pdf" style="width:100%">지난 기간 리포트 PDF 보기 <span>›</span></button>
+        <button class="link-row" id="rp-send" style="width:100%">지난 기간 리포트 메일로 보내기 <span>›</span></button>
+      </div>
+      <div class="card">
         <h2>기기</h2>
         <button class="link-row" id="logout" style="width:100%">이 기기에서 잠그기 <span>›</span></button>
       </div>
@@ -1244,6 +1250,20 @@ $('#c-colors').addEventListener('click', e => { const b = e.target.closest('[dat
 $('#c-save').addEventListener('click', saveCat);
 $('#a-save').addEventListener('click', saveAsset);
 $('#as-refresh').addEventListener('click', () => refreshPrices(true));
+$('#rp-pdf').addEventListener('click', async () => {
+  const win = window.open('', '_blank');   // 아이폰 사파리는 클릭 순간에 창을 열어야 막히지 않아요
+  try {
+    toast('리포트를 만드는 중…');
+    const r = await fetch(API + '/api/report?pdf=1', { headers: { 'x-app-token': getToken() } });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || 'HTTP ' + r.status);
+    const url = URL.createObjectURL(await r.blob());
+    if (win) win.location.href = url; else location.href = url;
+  } catch (e) { if (win) win.close(); toast('리포트 실패: ' + e.message); }
+});
+$('#rp-send').addEventListener('click', async () => {
+  try { toast('메일 보내는 중…'); const r = await api('report?send=1'); toast(r.message || '보냈어요'); }
+  catch (e) { toast(e.message); }
+});
 $('#c-del').addEventListener('click', deleteCat);
 amountInput($('#t-amount')); amountInput($('#f-amount')); amountInput($('#a-amount')); amountInput($('#f-actual'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
