@@ -32,24 +32,27 @@ const ASSET_FOR_BANK = { '카카오뱅크': '카카오뱅크 주거래', '신한
 const SAFEBOX_ASSET = '카카오뱅크 세이프박스';
 async function syncBalances(base, p) {
   const enc = s => encodeURIComponent(s);
-  const stamp = `[문자 ${p.date.slice(5).replace('-', '/')}${p.time ? ' ' + p.time : ''}]`;
+  const when = `${p.date.slice(5).replace('-', '/')}${p.time ? ' ' + p.time : ''}`;
   const done = [];
-  const update = async (name, fn) => {
+  // key: 같은 문자를 두 번 받았는지 확인하는 표시. 잔액을 그대로 덮어쓰는 경우는 두 번 해도 같아서 필요 없음
+  const update = async (name, fn, key) => {
     const r = await fetch(`${base}/assets?select=id,amount,memo&name=eq.${enc(name)}`, { headers: headers() });
     const rows = await r.json();
     if (!Array.isArray(rows) || !rows.length) return;
+    const stamp = `[문자 ${when}${key ? '|' + key : ''}]`;
     let shown = null;
     await Promise.all(rows.map(a => {
       const memo = String(a.memo || '');
-      if (memo.includes(stamp)) return null;   // 같은 문자를 두 번 받으면 한 번만 반영
+      if (key && memo.includes(stamp)) return null;
       const amount = fn(Number(a.amount));
       if (shown === null) shown = amount;
-      return fetch(`${base}/assets?id=eq.${a.id}`, { method: 'PATCH', headers: headers(), body: JSON.stringify({ amount, memo: (memo.replace(/\s*\[문자 [^\]]*\]$/, '') + ' ' + stamp).trim() }) });
+      const clean = memo.replace(/\s*\[(문자|직접) [^\]]*\]/g, '').trim();
+      return fetch(`${base}/assets?id=eq.${a.id}`, { method: 'PATCH', headers: headers(), body: JSON.stringify({ amount, memo: (clean + ' ' + stamp).trim() }) });
     }));
     if (shown !== null) done.push(`${name.replace(/^카카오뱅크 /, '')} 잔액 ${won(shown)}`);
   };
   if (p.balance !== null && ASSET_FOR_BANK[p.bank]) await update(ASSET_FOR_BANK[p.bank], () => p.balance);
-  if (p.isSafebox && p.bank === '카카오뱅크') await update(SAFEBOX_ASSET, v => Math.max(0, v + (p.kind === '출금' ? p.amount : -p.amount)));
+  if (p.isSafebox && p.bank === '카카오뱅크') await update(SAFEBOX_ASSET, v => Math.max(0, v + (p.kind === '출금' ? p.amount : -p.amount)), `${p.kind}${p.amount}`);
   return done;
 }
 
