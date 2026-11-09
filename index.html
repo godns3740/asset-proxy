@@ -112,6 +112,10 @@ input,select{font:inherit;color:var(--text)}
 .row .t1{font-size:14px}
 .row .t2{font-size:12px;color:var(--sub)}
 .row.off .t1,.row.off .amt{color:var(--muted);text-decoration:line-through}
+.fx-st{font-size:12px;margin-top:1px}
+.fx-st.paid{color:var(--accent)} .fx-st.wait{color:var(--muted)}
+.row .amt-col{text-align:right;flex-shrink:0}
+.row .amt-col .sub2{font-size:11px;color:var(--muted)}
 .link-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:1px solid var(--border);color:var(--text);text-decoration:none;font-size:15px}
 .link-row:first-of-type{border-top:0}
 .link-row span{color:var(--muted)}
@@ -276,11 +280,23 @@ input,select{font:inherit;color:var(--text)}
 
     <!-- FIXED -->
     <section id="v-fixed" data-view class="hidden">
-      <div class="top"><h1>고정지출</h1><button class="btn small ghost" id="fx-add">+ 추가</button></div>
+      <div class="top">
+        <h1 id="fx-title">고정지출</h1>
+        <div class="cycle-nav">
+          <button data-cycle="-1" aria-label="이전 달">‹</button>
+          <button data-cycle="1" aria-label="다음 달">›</button>
+        </div>
+      </div>
+      <div class="cycle-label num" id="fx-period"></div>
       <div class="card hero">
-        <div class="label">매달 나가는 돈</div>
+        <div class="label">이번 달 고정지출</div>
         <div class="big num" id="fx-total">—</div>
-        <div class="sub" style="font-size:13px">끈 항목은 합계에서 빠져요. 문자로 들어온 같은 이름의 출금은 변동지출에서 자동으로 빠져요.</div>
+        <div class="bar"><i id="fx-bar" style="width:0;background:var(--blue)"></i></div>
+        <div class="bar-legend num"><span id="fx-paid"></span><span id="fx-left"></span></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 2px 10px">
+        <span class="sub" style="font-size:12px">실제로 나간 금액이 있으면 그걸로, 아직이면 예상 금액으로 계산해요</span>
+        <button class="btn small ghost" id="fx-add" style="flex-shrink:0">+ 추가</button>
       </div>
       <div id="fx-list"></div>
     </section>
@@ -355,7 +371,12 @@ input,select{font:inherit;color:var(--text)}
   <div class="field"><label>이름 (문자에 찍히는 이름과 같게 하면 자동 구분돼요)</label><input class="input" id="f-name" placeholder="예: 넷플릭스" autocomplete="off"></div>
   <div class="field"><label>금액</label><input class="input num" id="f-amount" inputmode="numeric" placeholder="0원" autocomplete="off"></div>
   <div class="field"><label>분류</label><input class="input" id="f-cat" placeholder="예: 구독, 통신, 보험" list="f-cat-list" autocomplete="off"><datalist id="f-cat-list"></datalist></div>
-  <div class="field"><label class="check"><input type="checkbox" id="f-active" checked> 이번 달 합계에 포함</label></div>
+  <div class="field"><label class="check"><input type="checkbox" id="f-active" checked> 고정지출 합계에 포함</label></div>
+  <div class="field hidden" id="f-actual-box">
+    <label id="f-actual-label">이번 달 실제 금액</label>
+    <input class="input num" id="f-actual" inputmode="numeric" placeholder="문자가 안 오는 통장이면 직접 입력" autocomplete="off">
+    <div class="sub" id="f-actual-hint" style="font-size:12px;margin-top:6px"></div>
+  </div>
   <div class="sheet-actions">
     <button class="btn danger hidden" id="f-del">삭제</button>
     <button class="btn ghost" data-close>취소</button>
@@ -470,11 +491,71 @@ function cycleBounds() {
   const first = S.tx.length ? cycleOf(S.tx.map(t => t.date).sort()[0]) : cur;
   return { first, last: cur };
 }
+// ─── 고정지출: 예상 vs 실제 ──────────────────────────────────
+// 고정지출 이름과 문자에 찍히는 이름이 다른 경우의 별칭 (api/sms.js 와 같은 목록)
+const FIXED_ALIASES = [
+  [/휴대폰|통신|핸드폰/, /SK텔레콤|SKT|KT|LG유플러스|U\+|알뜰/i],
+  [/클로드|claude/i, /ANTHROPIC|CLAUDE/i],
+  [/넷플릭스/, /NETFLIX|넷플릭스/i],
+  [/icloud|아이클라우드/i, /APPLE|ICLOUD/i],
+  [/capcut|캡컷/i, /APPLE|CAPCUT/i],
+  [/티빙/, /TVING|티빙/i],
+  [/노션/, /NOTION|노션/i],
+  [/이모티콘/, /이모티콘/],
+  [/인터넷/, /인터넷|SK브로드밴드|KT|LG유플러스/i],
+];
+const normName = x => String(x || '').toLowerCase().replace(/[\s()（）\[\]·._+\-]/g, '');
+const FIXED_MANUAL = '고정 실제';   // 직접 입력한 실제 금액 표시 (subcategory)
+const _fxCache = new Map();
+function fixedStatus(key) {
+  if (_fxCache.has(key)) return _fxCache.get(key);
+  const { start, end } = cycleRange(key);
+  const items = S.fixed.filter(f => f.is_active !== false);
+  const txs = S.tx.filter(t => t.type === '지출' && t.is_fixed && t.date >= start && t.date <= end);
+  const byItem = new Map(), used = new Set(), unmatched = [];
+  for (const t of txs) {
+    const m = normName(memoName(t));
+    // 강한 일치: 문자 이름에 고정지출 이름이 들어 있음 ("대출이자+청약" → 대출이자, 청약)
+    let c = items.filter(f => { const n = normName(f.name); return n.length >= 2 && m.includes(n); });
+    if (!c.length) {
+      c = items.filter(f => { const n = normName(f.name); return (m.length >= 2 && n.includes(m)) || FIXED_ALIASES.some(([fr, sr]) => fr.test(f.name) && (sr.test(memoName(t)) || fr.test(memoName(t)))); });
+      if (c.length > 1) c = [c.sort((a, b) => Math.abs(a.amount - t.amount) - Math.abs(b.amount - t.amount))[0]];   // 금액이 가장 비슷한 것
+    }
+    if (!c.length) { unmatched.push(t); continue; }
+    c.forEach(f => { const r = byItem.get(f.id) || []; r.push({ t, group: c.length }); byItem.set(f.id, r); });
+  }
+  const rows = items.map(f => {
+    const hits = byItem.get(f.id) || [];
+    const manual = hits.filter(h => h.t.subcategory === FIXED_MANUAL).sort((a, b) => b.t.date.localeCompare(a.t.date) || b.t.id - a.t.id)[0];
+    const best = manual || hits.sort((a, b) => b.t.amount - a.t.amount)[0];   // 같은 돈이 이체+결제로 두 번 찍히면 하나만
+    return { f, tx: best ? best.t : null, group: best ? best.group : 0, manual: !!manual };
+  });
+  let paid = 0, pending = 0;
+  rows.forEach(r => { if (r.tx && !used.has(r.tx.id)) { used.add(r.tx.id); paid += r.tx.amount; } });
+  const extra = unmatched.reduce((a, t) => a + t.amount, 0);
+  const res = { start, end, rows, unmatched, paid: paid + extra, pending: 0, total: 0 };
+  _fxCache.set(key, res);
+  rows.forEach(r => { r.exp = expectedFixed(r.f, key); if (!r.tx) pending += r.exp.amount; });
+  res.pending = pending; res.total = res.paid + pending;
+  return res;
+}
+// 예상 금액: 최근 3달 실제 금액 평균, 기록이 없으면 등록한 금액
+function expectedFixed(f, key) {
+  const vals = [];
+  for (let i = 1; i <= 6 && vals.length < 3; i++) {
+    const k = ymShift(key, -i);
+    if (k < cycleBounds().first) break;
+    const r = fixedStatus(k).rows.find(x => x.f.id === f.id);
+    if (r && r.tx && r.group === 1) vals.push(r.tx.amount);
+  }
+  return vals.length ? { amount: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length), avg: vals.length } : { amount: Number(f.amount), avg: 0 };
+}
+
 function cycleSummary(key) {
   const { start, end } = cycleRange(key);
   const txs = S.tx.filter(t => t.date >= start && t.date <= end);
   const income = txs.filter(t => t.type === '수입').reduce((s, t) => s + t.amount, 0);
-  const fixed = S.fixed.filter(f => f.is_active !== false).reduce((s, f) => s + Number(f.amount), 0);
+  const fixed = fixedStatus(key).total;
   const varTx = txs.filter(t => t.type === '지출' && !t.is_fixed);
   const variable = varTx.reduce((s, t) => s + t.amount, 0);
   const byCat = {};
@@ -658,18 +739,34 @@ function renderCal(s, list) {
 
 // ─── 렌더: 고정지출 ──────────────────────────────────────────
 function renderFixed() {
-  const active = S.fixed.filter(f => f.is_active !== false);
-  $('#fx-total').textContent = W(active.reduce((s, f) => s + Number(f.amount), 0));
+  const st = fixedStatus(S.cycle);
+  $('#fx-title').textContent = cycleTitle(S.cycle) + ' 고정지출';
+  $('#fx-period').textContent = `${st.start.replace(/-/g, '.')} ~ ${st.end.replace(/-/g, '.')}`;
+  $('#fx-total').textContent = W(st.total);
+  $('#fx-bar').style.width = (st.total ? st.paid / st.total * 100 : 0) + '%';
+  $('#fx-paid').textContent = `빠져나감 ${W(st.paid)}`;
+  $('#fx-left').textContent = `남은 예상 ${W(st.pending)}`;
   const groups = {};
-  S.fixed.forEach(f => { (groups[f.category || '기타'] = groups[f.category || '기타'] || []).push(f); });
+  st.rows.forEach(r => { (groups[r.f.category || '기타'] = groups[r.f.category || '기타'] || []).push(r); });
+  S.fixed.filter(f => f.is_active === false).forEach(f => { (groups[f.category || '기타'] = groups[f.category || '기타'] || []).push({ f, off: true }); });
   const names = Object.keys(groups).sort();
-  $('#fx-list').innerHTML = names.length ? names.map(g => {
-    const sum = groups[g].filter(f => f.is_active !== false).reduce((s, f) => s + Number(f.amount), 0);
-    return `<div class="card"><h2>${esc(g)} <span class="num" style="color:var(--text)">${W(sum)}</span></h2>${groups[g].map(f => `
-      <button class="row ${f.is_active === false ? 'off' : ''}" data-fx="${f.id}">
-        <span class="grow"><span class="t1" style="display:block">${esc(f.name)}</span></span>
-        <span class="amt num">${W(Number(f.amount))}</span></button>`).join('')}</div>`;
-  }).join('') : '<div class="empty">고정지출을 추가해 보세요</div>';
+  const rowHtml = r => {
+    if (r.off) return `<button class="row off" data-fx="${r.f.id}"><span class="grow"><span class="t1" style="display:block">${esc(r.f.name)}</span><span class="fx-st wait" style="display:block">꺼 둠</span></span><span class="amt-col"><span class="amt num">${W(Number(r.f.amount))}</span></span></button>`;
+    const amt = r.tx ? r.tx.amount : r.exp.amount;
+    const expTxt = r.exp.avg ? `최근 ${r.exp.avg}달 평균 ${W(r.exp.amount)}` : `예상 ${W(r.exp.amount)}`;
+    const status = r.tx
+      ? `<span class="fx-st paid" style="display:block">✓ ${fmtMD(r.tx.date)} ${r.manual ? '직접 입력' : (r.group > 1 ? `함께 빠져나감 (${esc(memoName(r.tx))})` : '빠져나감')}</span>`
+      : `<span class="fx-st wait" style="display:block">아직 · ${expTxt}</span>`;
+    const diff = r.tx && r.group === 1 && r.tx.amount !== r.exp.amount ? `<span class="sub2 num" style="display:block">${expTxt}</span>` : '';
+    return `<button class="row" data-fx="${r.f.id}"><span class="grow"><span class="t1" style="display:block">${esc(r.f.name)}</span>${status}</span>
+      <span class="amt-col"><span class="amt num ${r.tx ? '' : 'muted'}">${r.tx && r.group > 1 ? '—' : W(amt)}</span>${diff}</span></button>`;
+  };
+  let html = names.map(g => {
+    const sum = groups[g].filter(r => !r.off).reduce((a, r) => a + (r.tx ? (r.group > 1 ? 0 : r.tx.amount) : r.exp.amount), 0);
+    return `<div class="card"><h2>${esc(g)} <span class="num" style="color:var(--text)">${W(sum)}</span></h2>${groups[g].map(rowHtml).join('')}</div>`;
+  }).join('');
+  if (st.unmatched.length) html += `<div class="card"><h2>목록에 없는 고정지출 <span class="num" style="color:var(--text)">${W(st.unmatched.reduce((a, t) => a + t.amount, 0))}</span></h2>${st.unmatched.map(txRow).join('')}</div>`;
+  $('#fx-list').innerHTML = html || '<div class="empty">고정지출을 추가해 보세요</div>';
   $('#f-cat-list').innerHTML = [...new Set(S.fixed.map(f => f.category).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('');
 }
 
@@ -765,6 +862,7 @@ async function saveReview(keepEtc) {
 
 // ─── 화면 전환 ───────────────────────────────────────────────
 function render() {
+  _fxCache.clear();
   const { first, last } = cycleBounds();
   $$('[data-cycle="-1"]').forEach(b => b.disabled = S.cycle <= first);
   $$('[data-cycle="1"]').forEach(b => b.disabled = S.cycle >= last);
@@ -841,6 +939,16 @@ function openFx(id) {
   $('#f-cat').value = f ? (f.category || '') : '';
   $('#f-active').checked = f ? f.is_active !== false : true;
   $('#f-del').classList.toggle('hidden', !f);
+  const r = f ? fixedStatus(S.cycle).rows.find(x => x.f.id === f.id) : null;
+  $('#f-actual-box').classList.toggle('hidden', !r);
+  if (r) {
+    $('#f-actual-label').textContent = `${cycleTitle(S.cycle)} 실제 금액`;
+    $('#f-actual').value = r.tx && r.manual ? r.tx.amount.toLocaleString('ko-KR') : '';
+    $('#f-actual-hint').textContent = r.tx && !r.manual
+      ? `문자로 ${fmtMD(r.tx.date)}에 ${W(r.tx.amount)} 빠져나간 게 확인됐어요. 다르면 직접 입력하세요.`
+      : r.manual ? '직접 입력한 금액이에요. 비우고 저장하면 예상 금액으로 돌아가요.'
+      : `아직 확인된 출금이 없어서 ${W(r.exp.amount)}(${r.exp.avg ? `최근 ${r.exp.avg}달 평균` : '예상'})로 계산 중이에요.`;
+  }
   openSheet('#sh-fx');
 }
 async function saveFx() {
@@ -848,10 +956,32 @@ async function saveFx() {
   if (!name || !amount) return toast('이름과 금액을 입력해 주세요');
   const body = { name, amount, category: $('#f-cat').value.trim() || '기타', is_active: $('#f-active').checked };
   try {
-    if (S.edit.fx) { await api('fixed', { method: 'PATCH', body: { id: S.edit.fx, ...body } }); Object.assign(S.fixed.find(f => f.id === S.edit.fx), body); }
+    if (S.edit.fx) {
+      const f = S.fixed.find(x => x.id === S.edit.fx);
+      await api('fixed', { method: 'PATCH', body: { id: S.edit.fx, ...body } }); Object.assign(f, body);
+      await saveFixedActual(f, $('#f-actual-box').classList.contains('hidden') ? null : digits($('#f-actual').value));
+    }
     else { const r = await api('fixed', { method: 'POST', body }); S.fixed.push(r && r[0] ? r[0] : { id: Date.now(), ...body }); }
     closeSheets(); render(); toast('저장했어요');
   } catch (e) { toast('저장 실패: ' + e.message); }
+}
+// 문자가 안 오는 통장의 고정지출: 실제 금액을 고정지출 내역으로 저장합니다
+async function saveFixedActual(f, amount) {
+  if (amount === null) return;
+  const r = fixedStatus(S.cycle).rows.find(x => x.f.id === f.id);
+  const manual = r && r.manual ? r.tx : null;
+  if (!amount) {
+    if (manual) { await api('transactions?id=' + manual.id, { method: 'DELETE' }); S.tx = S.tx.filter(t => t.id !== manual.id); }
+    return;
+  }
+  if (manual) {
+    if (manual.amount !== amount) { await api('transactions', { method: 'PATCH', body: { id: manual.id, amount } }); manual.amount = amount; }
+    return;
+  }
+  const { start, end } = cycleRange(S.cycle), td = today();
+  const body = { date: td < start ? start : td > end ? end : td, type: '지출', category: f.category || '기타', payment: '직접 입력', memo: f.name, amount, is_fixed: true, subcategory: FIXED_MANUAL };
+  const res = await api('transactions', { method: 'POST', body });
+  S.tx.push({ ...(res && res[0] ? res[0] : { id: Date.now(), ...body }), amount });
 }
 async function deleteFx() {
   if (!S.edit.fx || !confirm('이 고정지출을 삭제할까요?')) return;
@@ -952,7 +1082,7 @@ $('#cat-type').addEventListener('click', e => { const b = e.target.closest('[dat
 $('#c-colors').addEventListener('click', e => { const b = e.target.closest('[data-col]'); if (!b) return; catColorDraft = b.dataset.col; $$('#c-colors button').forEach(x => x.classList.toggle('on', x === b)); });
 $('#c-save').addEventListener('click', saveCat);
 $('#c-del').addEventListener('click', deleteCat);
-amountInput($('#t-amount')); amountInput($('#f-amount'));
+amountInput($('#t-amount')); amountInput($('#f-amount')); amountInput($('#f-actual'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
 // 앱으로 돌아오면 새 내역(문자 자동 기록)을 다시 불러옵니다
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && getToken() && !$('#app').classList.contains('hidden')) { try { await loadAll(); render(); } catch (e) {} } });
