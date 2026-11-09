@@ -32,6 +32,10 @@ Vercel 대시보드 → 프로젝트 → Settings → Environment Variables 에 
 | `KIS_APP_SECRET` | 한국투자증권 Open API App Secret |
 | `APP_TOKEN` | 가계부 비밀번호. 모든 API 요청에 `x-app-token` 헤더로 필요하며, 웹 앱은 처음 접속할 때 한 번 물어봅니다 |
 | `OWNER_NAME` | (선택) 본인 이름. 신한처럼 문자에 예금주 이름이 가려지지 않는 은행에서 내 계좌끼리 이체를 걸러낼 때 사용 |
+| `NAVER_SMTP_USER` | 월급날 리포트를 보낼 네이버 아이디 (네이버 메일 → 환경설정 → POP3/SMTP 사용) |
+| `NAVER_SMTP_PASS` | 네이버 비밀번호 (2단계 인증을 쓰면 애플리케이션 비밀번호) |
+| `REPORT_EMAIL` | 리포트를 받을 메일 주소 |
+| `CRON_SECRET` | Vercel 예약 실행 확인용 임의 문자열 (16자 이상) |
 
 CLI로 추가: `vercel env add SUPABASE_KEY production`
 
@@ -64,3 +68,9 @@ const PROXY_BASE_URL = 'https://asset-proxy-xxx.vercel.app';
   - 요청 본문 JSON: `text` = 단축어 입력 › 콘텐츠
 - 동작: `사전 값 가져오기`(키 `message`) → `시스템 알림 보기`
 - 신한처럼 예금주 이름이 가려지지 않는 은행은 Vercel 환경변수 `OWNER_NAME`(본인 이름)이 있어야 내 계좌끼리 이체를 걸러냅니다.
+
+## 월급날 리포트
+
+- 매일 08:00(KST)에 Vercel 예약 실행이 `/api/report?cron=1`을 부르고, 오늘이 월급날이면 지난 기간 결산 PDF를 `REPORT_EMAIL`로 보냅니다.
+- 아이폰 알림: 단축어 → 자동화 → **특정 시간** 08:30 → `URL 콘텐츠 가져오기` `GET /api/report?notify=1` (헤더 `x-app-token`) → `사전 값 가져오기`(`message`) → **만약** 값이 있으면 `시스템 알림 보기`.
+- 앱 더보기 → 월급날 리포트에서 지난 기간 PDF 보기 / 메일로 다시 보내기.
