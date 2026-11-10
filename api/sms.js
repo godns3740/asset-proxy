@@ -1,5 +1,6 @@
 import { requireAuth } from './_auth.js';
 import { parseSms, pickCategory } from './_sms-parse.js';
+import { findSettleTarget, SETTLE_CAT } from './_settle.js';
 
 // 아이폰 단축어가 카카오뱅크 문자를 그대로 보내면 거래내역에 저장합니다.
 // POST /api/sms  헤더 x-app-token, 본문 {"text":"문자 전체"} (또는 text/plain 본문)
@@ -162,6 +163,20 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, ignored: true, message: `취소 문자지만 원래 결제를 못 찾았어요: ${p.merchant} ${won(p.amount)}` });
     }
 
+    // 더치페이 정산: 사람 이름으로 들어온 돈이 최근 내 결제와 맞으면 그 결제에서 뺍니다
+    if (p.type === '수입' && /^[가-힣]{2,4}$/.test(p.merchant) && !['월급', '급여'].includes(tx.category)) {
+      const since = new Date(Date.parse(p.date) - 86400e3).toISOString().slice(0, 10);
+      const rr = await fetch(`${base}/transactions?select=id,date,type,category,amount,memo,is_fixed,subcategory,payment${mine}&date=gte.${since}&date=lte.${p.date}`, { headers: headers() });
+      const recent = await rr.json().catch(() => []);
+      const target = Array.isArray(recent) ? findSettleTarget({ date: p.date, time: p.time, amount: p.amount }, recent) : null;
+      if (target) {
+        const already = recent.filter(t => t.subcategory === `정산:${target.id}`).reduce((a, t) => a + Number(t.amount), 0);
+        tx.category = SETTLE_CAT; tx.subcategory = `정산:${target.id}`;
+        tx.settleNote = `${String(target.memo || '').split(' · ')[0]} ${won(Number(target.amount))} → 내 몫 ${won(Number(target.amount) - already - p.amount)}`;
+      }
+    }
+    const settleNote = tx.settleNote; delete tx.settleNote;
+
     // 같은 문자를 두 번 보내도 한 번만 저장합니다.
     const dr = await fetch(`${base}/transactions?select=id${mine}&date=eq.${p.date}&type=eq.${q(p.type)}&amount=eq.${p.amount}&memo=eq.${q(memo)}&limit=1`, { headers: headers() });
     const dup = await dr.json();
@@ -173,6 +188,7 @@ export default async function handler(req, res) {
     const saved = await ir.json();
     if (!ir.ok) return res.status(502).json({ ok: false, message: `저장 실패: ${saved?.message || ir.status}`, detail: saved });
     const sign = p.type === '수입' ? '+' : '-';
+    if (settleNote) return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `정산 +${won(p.amount)} (${p.merchant}) · ${settleNote}${syncMsg}` });
     return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${tx.is_fixed ? '고정 ' : ''}${category} ${sign}${won(p.amount)} (${p.merchant})${syncMsg}` });
   } catch (e) {
     return res.status(500).json({ ok: false, message: `서버 오류: ${e.message}` });

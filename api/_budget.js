@@ -1,3 +1,4 @@
+import { isSettle, applySettlements } from './_settle.js';
 // 서버용 가계부 계산 (index.html 의 계산과 같은 규칙)
 // 월급날 기준 기간, 고정지출 예상/실제, 특별 지출(예산 제외), 통장별 잔액 묶음
 
@@ -110,17 +111,18 @@ export function makeBudget({ tx = [], fixed = [], assets = [], payday = PAYDAY, 
   function summary(key) {
     const { start, end } = cycleRange(key);
     const txs = tx.filter(t => t.date >= start && t.date <= end);
-    const income = txs.filter(t => t.type === '수입').reduce((s, t) => s + t.amount, 0);
+    const income = txs.filter(t => t.type === '수입' && !isSettle(t)).reduce((s, t) => s + t.amount, 0);
     const salary = txs.filter(t => t.type === '수입' && SALARY_CATS.includes(t.category)).reduce((s, t) => s + t.amount, 0);
     const fx = fixedStatus(key);
     const varTx = txs.filter(t => t.type === '지출' && !t.is_fixed && !isExcluded(t));
-    const variable = varTx.reduce((s, t) => s + t.amount, 0);
     const excludedTx = txs.filter(isExcluded);
     const byCat = {}, shops = {};
     varTx.forEach(t => {
       byCat[t.category] = (byCat[t.category] || 0) + t.amount;
       const k = memoName(t); shops[k] = shops[k] || { n: 0, sum: 0 }; shops[k].n++; shops[k].sum += t.amount;
     });
+    const settled = applySettlements(txs, varTx, byCat, tx);   // 더치페이로 돌려받은 돈은 지출에서 뺌
+    const variable = varTx.reduce((s, t) => s + t.amount, 0) - settled;
     return {
       key, start, end, txs, income, salary, fixed: fx.total, fixedStatus: fx, variable, varTx, byCat, shops,
       excluded: excludedTx.reduce((s, t) => s + t.amount, 0), excludedTx,
