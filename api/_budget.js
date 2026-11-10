@@ -35,9 +35,11 @@ export const addDays = (s, n) => { const d = parseD(s); d.setUTCDate(d.getUTCDat
 export const ymShift = (key, n) => { let [y, m] = key.split('-').map(Number); m += n; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${pad(m)}`; };
 export const todayKST = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 const isOffDay = ds => { const d = parseD(ds).getUTCDay(); return d === 0 || d === 6 || HOLIDAYS.has(ds) || FIXED_HOLIDAYS.includes(ds.slice(5)); };
-export function expectedPayday(key) {
-  let ds = `${key}-${pad(PAYDAY)}`;
-  while (isOffDay(ds)) ds = addDays(ds, -1);
+// 월급날 (주말·공휴일이면 rule 에 따라 앞당기거나 미룸). 그 달에 없는 날짜(31일 등)는 말일로
+export function expectedPayday(key, payday = PAYDAY, rule = 'before') {
+  const last = new Date(Date.UTC(+key.slice(0, 4), +key.slice(5, 7), 0)).getUTCDate();
+  let ds = `${key}-${pad(Math.min(payday, last))}`;
+  while (isOffDay(ds)) ds = addDays(ds, rule === 'after' ? 1 : -1);
   return ds;
 }
 
@@ -45,7 +47,8 @@ const memoName = t => String(t.memo || '').split(' · ')[0];
 const normName = x => String(x || '').toLowerCase().replace(/[\s()（）\[\]·._+\-]/g, '');
 export const isExcluded = t => t.subcategory === EXCLUDED;
 
-export function makeBudget({ tx = [], fixed = [], assets = [] }) {
+export function makeBudget({ tx = [], fixed = [], assets = [], payday = PAYDAY, paydayRule = 'before' }) {
+  const payOf = key => expectedPayday(key, payday, paydayRule);
   tx = tx.map(t => ({ ...t, amount: Number(t.amount) || 0 }));
   fixed = fixed.map(f => ({ ...f, amount: Number(f.amount) || 0 }));
   assets = assets.map(a => ({ ...a, amount: Number(a.amount) || 0 }));
@@ -53,7 +56,7 @@ export function makeBudget({ tx = [], fixed = [], assets = [] }) {
   const salaryDate = key => tx.filter(t => t.type === '수입' && SALARY_CATS.includes(t.category) && t.date.startsWith(key)).map(t => t.date).sort()[0] || null;
   function cycleRange(key) {
     const prev = ymShift(key, -1);
-    return { start: salaryDate(prev) || expectedPayday(prev), end: addDays(salaryDate(key) || expectedPayday(key), -1) };
+    return { start: salaryDate(prev) || payOf(prev), end: addDays(salaryDate(key) || payOf(key), -1) };
   }
   function cycleOf(ds) {
     let key = ds.slice(0, 7);
@@ -149,14 +152,14 @@ export function makeBudget({ tx = [], fixed = [], assets = [] }) {
     };
   }
 
-  return { cycleRange, cycleOf, summary, fixedStatus, assetGroups, salaryDate };
+  return { cycleRange, cycleOf, summary, fixedStatus, assetGroups, salaryDate, payOf };
 }
 
 // 오늘이 월급날(예상)이면, 어제 끝난 기간의 키를 돌려줍니다
 export function reportCycleForToday(budget, today = todayKST()) {
   const key = today.slice(0, 7);
   // 이번 달 월급이 이미 기록됐으면 그 날, 아니면 예정된 월급날에 한 번
-  if (today !== (budget.salaryDate(key) || expectedPayday(key))) return null;
+  if (today !== (budget.salaryDate(key) || budget.payOf(key))) return null;
   return budget.cycleOf(addDays(today, -1));
 }
 export const cycleLabel = key => `${Number(key.slice(5))}월`;

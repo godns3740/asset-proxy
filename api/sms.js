@@ -27,17 +27,30 @@ const FIXED_ALIASES = [
   [/이모티콘/, /이모티콘/],
   [/인터넷/, /인터넷|SK브로드밴드|KT|LG유플러스/i],
 ];
+// ─── 사람별 설정 (profiles 표) ───────────────────────────────
+const enc = s => encodeURIComponent(s);
+async function loadProfile(base, owner) {
+  const fallback = owner === (process.env.APP_OWNER || '규원')
+    ? { owner_name: process.env.OWNER_NAME, settings: { balanceAssets: { '카카오뱅크': '카카오뱅크 주거래', '신한': '신한은행 통장' }, safeboxAsset: '카카오뱅크 세이프박스' } }
+    : { owner_name: '', settings: {} };
+  try {
+    const r = await fetch(`${base}/profiles?owner=eq.${enc(owner)}&limit=1`, { headers: headers() });
+    const rows = await r.json();
+    if (r.ok && Array.isArray(rows) && rows[0]) return { ...fallback, ...rows[0], owner_name: rows[0].owner_name || fallback.owner_name, settings: { ...fallback.settings, ...(rows[0].settings || {}) } };
+  } catch (e) { /* 설정이 없으면 기본값 */ }
+  return fallback;
+}
+
 // ─── 통장 잔액 맞추기 ───────────────────────────────────────
-// 문자를 보내는 통장 → 자산 목록의 이름
-const ASSET_FOR_BANK = { '카카오뱅크': '카카오뱅크 주거래', '신한': '신한은행 통장' };
-const SAFEBOX_ASSET = '카카오뱅크 세이프박스';
-async function syncBalances(base, p) {
-  const enc = s => encodeURIComponent(s);
+// 문자를 보내는 통장 → 자산 목록의 이름 (사람마다 settings.balanceAssets / safeboxAsset)
+async function syncBalances(base, p, owner, profile) {
+  const ASSET_FOR_BANK = profile.settings.balanceAssets || {};
+  const SAFEBOX_ASSET = profile.settings.safeboxAsset;
   const when = `${p.date.slice(5).replace('-', '/')}${p.time ? ' ' + p.time : ''}`;
   const done = [];
   // key: 같은 문자를 두 번 받았는지 확인하는 표시. 잔액을 그대로 덮어쓰는 경우는 두 번 해도 같아서 필요 없음
   const update = async (name, fn, key) => {
-    const r = await fetch(`${base}/assets?select=id,amount,memo&name=eq.${enc(name)}`, { headers: headers() });
+    const r = await fetch(`${base}/assets?select=id,amount,memo&name=eq.${enc(name)}&owner=eq.${enc(owner)}`, { headers: headers() });
     const rows = await r.json();
     if (!Array.isArray(rows) || !rows.length) return;
     const stamp = `[문자 ${when}${key ? '|' + key : ''}]`;
@@ -53,7 +66,7 @@ async function syncBalances(base, p) {
     if (shown !== null) done.push(`${name.replace(/^카카오뱅크 /, '')} 잔액 ${won(shown)}`);
   };
   if (p.balance !== null && ASSET_FOR_BANK[p.bank]) await update(ASSET_FOR_BANK[p.bank], () => p.balance);
-  if (p.isSafebox && p.bank === '카카오뱅크') await update(SAFEBOX_ASSET, v => Math.max(0, v + (p.kind === '출금' ? p.amount : -p.amount)), `${p.kind}${p.amount}`);
+  if (p.isSafebox && p.bank === '카카오뱅크' && SAFEBOX_ASSET) await update(SAFEBOX_ASSET, v => Math.max(0, v + (p.kind === '출금' ? p.amount : -p.amount)), `${p.kind}${p.amount}`);
   return done;
 }
 
@@ -87,14 +100,16 @@ export default async function handler(req, res) {
 
   const body = req.body;
   const text = typeof body === 'string' ? body : (body?.text || body?.message || '');
-  const p = parseSms(text, undefined, { ownerName: process.env.OWNER_NAME });
+  const base = `${SUPABASE_URL}/rest/v1`;
+  const me = req.owner, mine = `&owner=eq.${enc(me)}`;
+  const profile = await loadProfile(base, me);
+  const p = parseSms(text, undefined, { ownerName: profile.owner_name });
   if (!p.ok) return res.status(422).json({ ok: false, message: `기록 못 함: ${p.reason}` });
 
-  const base = `${SUPABASE_URL}/rest/v1`;
   try {
     const [cr, fr] = await Promise.all([
-      fetch(`${base}/categories?select=name,type`, { headers: headers() }),
-      fetch(`${base}/fixed_expenses?select=name,category,is_active,amount`, { headers: headers() }),
+      fetch(`${base}/categories?select=name,type${mine}`, { headers: headers() }),
+      fetch(`${base}/fixed_expenses?select=name,category,is_active,amount${mine}`, { headers: headers() }),
     ]);
     const cats = await cr.json();
     const fixedList = await fr.json().catch(() => []);
@@ -102,24 +117,26 @@ export default async function handler(req, res) {
     // 고정지출 목록의 이름과 겹치는 출금이면 고정지출로 표시 (변동지출 합계에서 빠짐)
     const fixedHit = p.type === '지출' ? matchFixed(p.merchant, Array.isArray(fixedList) ? fixedList : [], p.amount) : null;
     let category = pickCategory(p.merchant, p.type, names, p.time);
+    // 처음 설정에서 적은 "월급 문자에 찍히는 이름"이면 월급으로
+    const salaryNames = (profile.settings.salaryNames || []).filter(Boolean);
+    if (p.type === '수입' && salaryNames.some(n => p.merchant.includes(n))) category = names.find(n => n === '월급' || n === '급여') || category;
     const ruleCategory = category;
     if (fixedHit && fixedHit.category && names.includes(fixedHit.category)) category = fixedHit.category;
     // 자동 분류가 안 되면, 예전에 같은 가게·사람을 직접 정리한 카테고리를 따릅니다
     if (!fixedHit && (category === '기타' || category === '기타수입') && p.merchant.length >= 2 && !/^토스페이|ATM|현금/i.test(p.merchant)) {
-      const enc = s => encodeURIComponent(s);
-      const lr = await fetch(`${base}/transactions?select=category,memo&type=eq.${enc(p.type)}&category=neq.${enc('기타')}&category=neq.${enc('기타수입')}&or=(memo.like.${enc(p.merchant + ' · *')},memo.like.${enc('*(' + p.merchant + ') · *')},memo.eq.${enc(p.merchant)})&order=date.desc&limit=1`, { headers: headers() });
+      const lr = await fetch(`${base}/transactions?select=category,memo${mine}&type=eq.${enc(p.type)}&category=neq.${enc('기타')}&category=neq.${enc('기타수입')}&or=(memo.like.${enc(p.merchant + ' · *')},memo.like.${enc('*(' + p.merchant + ') · *')},memo.eq.${enc(p.merchant)})&order=date.desc&limit=1`, { headers: headers() });
       const learned = await lr.json().catch(() => []);
       if (Array.isArray(learned) && learned[0] && names.includes(learned[0].category)) category = learned[0].category;
     }
     const memo = p.time ? `${p.merchant} · ${p.time}` : p.merchant;
-    const tx = { date: p.date, type: p.type, category, payment: guessPayment(p, ruleCategory, fixedHit), memo, amount: p.amount, is_fixed: !!fixedHit };
+    const tx = { date: p.date, type: p.type, category, payment: guessPayment(p, ruleCategory, fixedHit), memo, amount: p.amount, is_fixed: !!fixedHit, owner: me };
 
     if (req.query?.dryRun) return res.status(200).json({ ok: true, dryRun: true, parsed: p, transaction: tx });
 
     const q = s => encodeURIComponent(s);
 
     // 문자에 찍힌 잔액으로 통장 잔액을 맞춥니다 (실패해도 기록은 계속)
-    const synced = await syncBalances(base, p).catch(() => []);
+    const synced = await syncBalances(base, p, me, profile).catch(() => []);
     const syncMsg = synced.length ? ` · ${synced.join(', ')}` : '';
 
     // 내 계좌끼리 옮긴 돈은 수입/지출이 아니므로 기록하지 않습니다.
@@ -130,7 +147,7 @@ export default async function handler(req, res) {
 
     // 결제 취소: 같은 가맹점·금액의 최근 지출을 지웁니다.
     if (p.isCancel) {
-      const fr = await fetch(`${base}/transactions?type=eq.${q('지출')}&amount=eq.${p.amount}&memo=like.${q(p.merchant + '*')}&order=date.desc&limit=1`, { headers: headers() });
+      const fr = await fetch(`${base}/transactions?type=eq.${q('지출')}${mine}&amount=eq.${p.amount}&memo=like.${q(p.merchant + '*')}&order=date.desc&limit=1`, { headers: headers() });
       const found = await fr.json();
       if (Array.isArray(found) && found[0]) {
         await fetch(`${base}/transactions?id=eq.${found[0].id}`, { method: 'DELETE', headers: headers() });
@@ -140,7 +157,7 @@ export default async function handler(req, res) {
     }
 
     // 같은 문자를 두 번 보내도 한 번만 저장합니다.
-    const dr = await fetch(`${base}/transactions?select=id&date=eq.${p.date}&type=eq.${q(p.type)}&amount=eq.${p.amount}&memo=eq.${q(memo)}&limit=1`, { headers: headers() });
+    const dr = await fetch(`${base}/transactions?select=id${mine}&date=eq.${p.date}&type=eq.${q(p.type)}&amount=eq.${p.amount}&memo=eq.${q(memo)}&limit=1`, { headers: headers() });
     const dup = await dr.json();
     if (Array.isArray(dup) && dup[0]) {
       return res.status(200).json({ ok: true, duplicate: true, id: dup[0].id, message: `이미 기록됨: ${p.merchant} ${won(p.amount)}` });

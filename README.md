@@ -31,6 +31,7 @@ Vercel 대시보드 → 프로젝트 → Settings → Environment Variables 에 
 | `KIS_APP_KEY` | 한국투자증권 Open API App Key |
 | `KIS_APP_SECRET` | 한국투자증권 Open API App Secret |
 | `APP_TOKEN` | 가계부 비밀번호. 모든 API 요청에 `x-app-token` 헤더로 필요하며, 웹 앱은 처음 접속할 때 한 번 물어봅니다 |
+| `APP_USERS` | 함께 쓰는 사람의 이름과 비밀번호 `이름:비밀번호` (여러 명이면 쉼표). 예: `성재:비밀번호` |
 | `OWNER_NAME` | (선택) 본인 이름. 신한처럼 문자에 예금주 이름이 가려지지 않는 은행에서 내 계좌끼리 이체를 걸러낼 때 사용 |
 | `NAVER_SMTP_USER` | 월급날 리포트를 보낼 네이버 아이디 (네이버 메일 → 환경설정 → POP3/SMTP 사용) |
 | `NAVER_SMTP_PASS` | 네이버 비밀번호 (2단계 인증을 쓰면 애플리케이션 비밀번호) |
@@ -74,3 +75,11 @@ const PROXY_BASE_URL = 'https://asset-proxy-xxx.vercel.app';
 - 매일 08:00(KST)에 Vercel 예약 실행이 `/api/report?cron=1`을 부르고, 오늘이 월급날이면 지난 기간 결산 PDF를 `REPORT_EMAIL`로 보냅니다.
 - 아이폰 알림: 단축어 → 자동화 → **특정 시간** 08:30 → `URL 콘텐츠 가져오기` `GET /api/report?notify=1` (헤더 `x-app-token`) → `사전 값 가져오기`(`message`) → **만약** 값이 있으면 `시스템 알림 보기`.
 - 앱 더보기 → 월급날 리포트에서 지난 기간 PDF 보기 / 메일로 다시 보내기.
+
+## 함께 쓰기 (규원 · 성재)
+
+1. Supabase → SQL Editor 에서 `docs/supabase-multiuser.sql` 실행 (데이터에 owner 칸, profiles 표 추가. 기존 데이터는 '규원')
+2. Vercel 환경변수 `APP_USERS` = `성재:비밀번호`
+3. 성재가 그 비밀번호로 앱에 들어가면 **처음 설정** 화면이 나옵니다 (월급날, 카테고리, 고정지출, 통장, 문자 연결)
+- 맨 위 `규원 | 성재 | 함께` 로 전환. 상대 것은 보기만 되고, 고치기·지우기는 서버에서도 막힙니다.
+- 단축어는 각자 자기 비밀번호를 `x-app-token`에 넣으면 각자 데이터로 기록됩니다.
