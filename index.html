@@ -684,6 +684,7 @@ async function loadAll() {
   try { prof = await api('profiles'); } catch (e) { if (e.message === 'unauthorized') throw e; }
   S.me = (prof && prof.me) || S.me || '규원';
   S.profiles = prof && Array.isArray(prof.profiles) && prof.profiles.length ? prof.profiles : [{ owner: S.me, display_name: S.me, payday: 25, payday_rule: 'before', setup_done: true }];
+  S.profiles = [...S.profiles].sort((a, b) => (b.owner === S.me) - (a.owner === S.me));   // 나를 먼저
   if (!S.view || (S.view !== 'together' && !S.profiles.some(p => p.owner === S.view))) S.view = S.me;
   const q = owner => (prof ? `?owner=${encodeURIComponent(owner)}` : '');
   const load = async owner => {
