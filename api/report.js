@@ -22,10 +22,12 @@ function isCron(req) {
   return given.length === want.length && timingSafeEqual(given, want);
 }
 
-async function load() {
-  const get = async t => { const r = await fetch(`${SUPABASE_URL}/rest/v1/${t}?select=*`, { headers: sbHeaders() }); const d = await r.json(); return Array.isArray(d) ? d : []; };
-  const [tx, fixed, cats, assets] = await Promise.all([get('transactions'), get('fixed_expenses'), get('categories'), get('assets')]);
-  return { budget: makeBudget({ tx, fixed, assets }), cats };
+async function load(owner) {
+  const who = `&owner=eq.${encodeURIComponent(owner)}`;
+  const get = async (t, extra = who) => { const r = await fetch(`${SUPABASE_URL}/rest/v1/${t}?select=*${extra}`, { headers: sbHeaders() }); const d = await r.json(); return Array.isArray(d) ? d : []; };
+  const [tx, fixed, cats, assets, prof] = await Promise.all([get('transactions'), get('fixed_expenses'), get('categories'), get('assets'), get('profiles', who)]);
+  const pr = prof[0] || {};
+  return { budget: makeBudget({ tx, fixed, assets, payday: pr.payday || 25, paydayRule: pr.payday_rule || 'before' }), cats };
 }
 
 async function sendMail(report, pdf) {
@@ -50,9 +52,10 @@ export default async function handler(req, res) {
   const cron = isCron(req);
   if (!cron && !requireAuth(req, res)) return;
   const q = req.query || {};
+  const owner = cron ? (process.env.APP_OWNER || '규원') : (q.owner || req.owner);
 
   try {
-    const { budget, cats } = await load();
+    const { budget, cats } = await load(owner);
     const today = todayKST();
     const paydayKey = reportCycleForToday(budget, today);
 

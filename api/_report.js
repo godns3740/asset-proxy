@@ -8,6 +8,8 @@ const W = n => `${Math.round(n).toLocaleString('ko-KR')}원`;
 const man = n => { const a = Math.round(Math.abs(n)); return a >= 10000 ? `${(Math.round(a / 1000) / 10).toLocaleString('ko-KR')}만원` : `${a.toLocaleString('ko-KR')}원`; };
 const signedMan = n => (n > 0 ? '+' : n < 0 ? '−' : '') + man(n);
 const dot = s => s.replace(/-/g, '.');
+// 기간 이름: 날짜가 가장 많이 걸친 달
+const midMonthLabel = (a, b) => { const t = (Date.parse(a) + Date.parse(b)) / 2; return `${new Date(t).getUTCMonth() + 1}월`; };
 
 // ─── 숫자 정리 ───────────────────────────────────────────────
 export function buildReport(budget, key, cats = []) {
@@ -34,7 +36,7 @@ export function buildReport(budget, key, cats = []) {
   else notes.push(`${man(-s.remain)} 초과했어요. 다음 달엔 변동지출 목표를 ${man(Math.max(0, s.variable + s.remain))} 안쪽으로 잡아 보세요.`);
 
   return {
-    key, title: `${cycleLabel(key)} 결산`, period: `${dot(s.start)} ~ ${dot(s.end)}`,
+    key, title: `${midMonthLabel(s.start, s.end)} 결산`, period: `${dot(s.start)} ~ ${dot(s.end)}`,
     income: s.income, salary: s.salary, fixed: fx.total, fixedPaid: fx.paid, fixedPending: fx.pending,
     variable: s.variable, prevVariable: p.variable, remain: s.remain, prevRemain: p.salary ? p.remain : null,
     excluded: s.excluded, excludedTx: s.excludedTx.map(t => ({ name: String(t.memo || '').split(' · ')[0], amount: t.amount })),
