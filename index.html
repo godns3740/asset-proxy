@@ -448,6 +448,7 @@ body.together .tabs,body.together .fab{display:none!important}
   <div class="field"><label>결제수단</label><div class="pick" id="t-pay"></div></div>
   <div class="field"><label class="check"><input type="checkbox" id="t-fixed"> 고정지출 (변동지출 합계에서 빼기)</label></div>
   <div class="field"><label class="check"><input type="checkbox" id="t-except"> 특별 지출 · 이번 달 예산에서 빼기 (생신 선물, 큰 경조사 등)</label></div>
+  <div class="field hidden" id="t-settle-box"><label class="check"><input type="checkbox" id="t-settle"> <span id="t-settle-label">정산 · 내가 낸 결제에서 빼기</span></label></div>
   <div class="sheet-actions">
     <button class="btn danger hidden" id="t-del">삭제</button>
     <button class="btn ghost" data-close>취소</button>
@@ -661,13 +662,17 @@ function expectedFixed(f, key) {
 function cycleSummary(key) {
   const { start, end } = cycleRange(key);
   const txs = S.tx.filter(t => t.date >= start && t.date <= end);
-  const income = txs.filter(t => t.type === '수입').reduce((s, t) => s + t.amount, 0);
+  const income = txs.filter(t => t.type === '수입' && !isSettle(t)).reduce((s, t) => s + t.amount, 0);
   const fixed = fixedStatus(key).total;
   const varTx = txs.filter(t => t.type === '지출' && !t.is_fixed && !isExcluded(t));
   const excluded = txs.filter(isExcluded).reduce((s, t) => s + t.amount, 0);
-  const variable = varTx.reduce((s, t) => s + t.amount, 0);
   const byCat = {};
   varTx.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
+  // 돌려받은 돈은 대신 낸 결제의 카테고리에서 뺌
+  let settled = 0;
+  txs.filter(isSettle).forEach(st => { const tg = S.tx.find(x => x.id === settleTarget(st)); const c = tg ? tg.category : '기타'; byCat[c] = (byCat[c] || 0) - st.amount; settled += st.amount; });
+  Object.keys(byCat).forEach(k => { if (byCat[k] <= 0) delete byCat[k]; });
+  const variable = varTx.reduce((s, t) => s + t.amount, 0) - settled;
   const salary = txs.filter(t => t.type === '수입' && SALARY_CATS.includes(t.category)).reduce((s, t) => s + t.amount, 0);
   return { start, end, txs, income, salary, fixed, variable, excluded, usable: income - fixed, remain: income - fixed - variable, byCat };
 }
@@ -821,6 +826,10 @@ const isTossUnknown = t => t.type === '지출' && /^토스페이( \(|$| ·)/.tes
 const REVIEWED = '확인함';
 const EXCLUDED = '예산 제외';   // 특별 지출: 내역엔 남지만 예산 계산에서 빠짐
 function isExcluded(t) { return t.subcategory === EXCLUDED; }
+// 더치페이 정산: 사람에게 돌려받은 돈을 대신 낸 결제에서 뺌 (subcategory '정산:<결제 id>')
+function isSettle(t) { return t.type === '수입' && /^정산:/.test(t.subcategory || ''); }
+function settleTarget(t) { const m = /^정산:(\d+)/.exec(t.subcategory || ''); return m ? +m[1] : null; }
+function settledOf(id) { return S.tx.filter(x => isSettle(x) && settleTarget(x) === id).reduce((a, x) => a + x.amount, 0); }
 const isAutoRecorded = t => / · \d{2}:\d{2}$/.test(t.memo || '');
 const memoName = t => String(t.memo || '').split(' · ')[0];
 const memoTime = t => { const m = String(t.memo || '').match(/ · (\d{2}:\d{2})$/); return m ? m[1] : ''; };
@@ -830,11 +839,13 @@ const reviewAll = () => S.tx.filter(needsReview).sort((a, b) => (b.date + memoTi
 function txRow(t) {
   const c = catColor(t.category);
   const [title, time] = String(t.memo || '').split(' · ');
+  const back = t.type === '지출' ? settledOf(t.id) : 0;
+  const tg = isSettle(t) ? S.tx.find(x => x.id === settleTarget(t)) : null;
   return `<button class="tx" data-tx="${t.id}">
     <span class="ic" style="background:${esc(c)}22;color:${esc(c)}">${esc((t.category || '?').slice(0, 1))}</span>
-    <span class="body"><span class="t1" style="display:block">${esc(title || t.category)}${t.is_fixed ? '<span class="badge">고정</span>' : ''}${isExcluded(t) ? '<span class="badge">예외</span>' : ''}${needsReview(t) ? '<span class="badge warn">확인 필요</span>' : ''}</span>
-      <span class="t2" style="display:block">${esc(t.category)}${t.payment ? ' · ' + esc(t.payment) : ''}${time ? ' · ' + esc(time) : ''}</span></span>
-    <span class="amt num ${t.type === '수입' ? 'up' : ''}">${signed(t.amount, t.type)}</span>
+    <span class="body"><span class="t1" style="display:block">${esc(title || t.category)}${t.is_fixed ? '<span class="badge">고정</span>' : ''}${isExcluded(t) ? '<span class="badge">예외</span>' : ''}${isSettle(t) ? '<span class="badge">정산</span>' : ''}${needsReview(t) ? '<span class="badge warn">확인 필요</span>' : ''}</span>
+      <span class="t2" style="display:block">${tg ? `${esc(memoName(tg))}에서 뺌` : esc(t.category)}${t.payment ? ' · ' + esc(t.payment) : ''}${time ? ' · ' + esc(time) : ''}</span></span>
+    <span class="amt-col"><span class="amt num ${t.type === '수입' ? (isSettle(t) ? 'muted' : 'up') : ''}" style="display:block">${signed(t.amount, t.type)}</span>${back ? `<span class="num" style="display:block;font-size:11px;color:var(--accent)">내 몫 ${W(t.amount - back)}</span>` : ''}</span>
   </button>`;
 }
 
@@ -1447,6 +1458,8 @@ function openTx(id) {
   $('#t-date').value = t ? t.date : (S.calSel || today());
   $('#t-fixed').checked = !!(t && t.is_fixed);
   $('#t-except').checked = !!(t && isExcluded(t));
+  $('#t-settle-box').classList.toggle('hidden', !(t && isSettle(t)));
+  if (t && isSettle(t)) { const tg = S.tx.find(x => x.id === settleTarget(t)); $('#t-settle').checked = true; $('#t-settle-label').textContent = `정산 · ${tg ? memoName(tg) + ' ' + W(tg.amount) : '대신 낸 결제'}에서 빼기 (끄면 수입으로)`; }
   $('#t-del').classList.toggle('hidden', !t);
   renderTxPickers();
   openSheet('#sh-tx');
@@ -1460,6 +1473,10 @@ async function saveTx() {
   const prev = S.edit.tx ? S.tx.find(t => t.id === S.edit.tx) : null;
   if ($('#t-except').checked) body.subcategory = EXCLUDED;
   else if (prev && isExcluded(prev)) body.subcategory = REVIEWED;
+  if (prev && isSettle(prev)) {
+    if ($('#t-settle').checked) body.subcategory = prev.subcategory;
+    else { body.subcategory = REVIEWED; if (body.category === '정산') body.category = '기타수입'; }
+  }
   const btn = $('#t-save'); btn.disabled = true;
   try {
     if (S.edit.tx) { await api('transactions', { method: 'PATCH', body: { id: S.edit.tx, ...body } }); Object.assign(S.tx.find(t => t.id === S.edit.tx), body); toast('수정했어요'); }
