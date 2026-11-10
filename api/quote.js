@@ -87,7 +87,7 @@ export default async function handler(req, res) {
 
     for (const sym of symList) {
       try {
-        if (US_TICKERS.has(sym)) {
+        if (US_TICKERS.has(sym) || /^[A-Z][A-Z.]{0,5}$/.test(sym)) {   // 영문 티커는 미국 주식
           const q = await getUSPrice(token, sym);
           if (q) result[sym] = q;
         } else {

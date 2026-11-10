@@ -139,6 +139,12 @@ export default async function handler(req, res) {
     const synced = await syncBalances(base, p, me, profile).catch(() => []);
     const syncMsg = synced.length ? ` · ${synced.join(', ')}` : '';
 
+    // 신용카드 카드값: 결제할 때마다 카드 문자로 이미 기록되니, 통장에서 빠지는 카드값은 건너뜁니다
+    const cardBills = (profile.settings.cardBills || []).filter(Boolean);
+    if (p.type === '지출' && cardBills.some(c => p.merchant.includes(c))) {
+      return res.status(200).json({ ok: true, ignored: true, message: `카드값 출금 ${won(p.amount)} · 결제마다 이미 기록돼서 건너뜀${syncMsg}` });
+    }
+
     // 내 계좌끼리 옮긴 돈은 수입/지출이 아니므로 기록하지 않습니다.
     if (p.isSelfTransfer) {
       const what = p.isSafebox ? (p.kind === '출금' ? '세이프박스에 넣음' : '세이프박스에서 꺼냄') : '내 계좌 이체';
