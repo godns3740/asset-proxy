@@ -27,7 +27,7 @@ const FIXED_ALIASES = [
   [/티빙/, /TVING|티빙/i],
   [/노션/, /NOTION|노션/i],
   [/이모티콘/, /이모티콘/],
-  [/인터넷/, /인터넷|SK브로드밴드|KT|LG유플러스/i],
+  [/인터넷/, /인터넷|SK브로드밴드|KT|LG유플러스|두우정보통신/i],
 ];
 // ─── 사람별 설정 (profiles 표) ───────────────────────────────
 const enc = s => encodeURIComponent(s);

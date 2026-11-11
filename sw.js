@@ -1,5 +1,5 @@
 // 홈 화면 앱: 화면(HTML·글꼴·아이콘)은 휴대폰에 저장해 두고 빠르게 열고, 데이터(/api)는 항상 새로 받습니다.
-const CACHE = 'gagyebu-v4';
+const CACHE = 'gagyebu-v5';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
