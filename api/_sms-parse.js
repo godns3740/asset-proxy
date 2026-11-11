@@ -23,10 +23,35 @@ function resolveDate(mm, dd, now = kstNow()) {
   return `${year}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
 }
 
+// 카드 승인 문자 (현대카드 등): 승인/취소가 첫 줄에, 금액은 다른 줄에
+//  현대 네이버 승인 / 양*재 / 11,000원 일시불 / 11/11 19:47 / 신통치킨평택역점 / 누적938,040원
+function parseCardSms(lines, text, now) {
+  const head = lines.findIndex(l => /(승인|취소)/.test(l) && !/\d[\d,]*\s*원/.test(l) && !/(입금|출금)/.test(l));
+  if (head === -1) return null;
+  const ai = lines.findIndex((l, i) => i > head && /^[\d,]+\s*원/.test(l));
+  if (ai === -1) return null;
+  const amount = parseInt(lines[ai].match(/^([\d,]+)/)[1].replace(/,/g, ''), 10);
+  if (!amount) return null;
+  const isCancel = /취소/.test(lines[head]);
+  const dm = text.match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  const date = dm ? resolveDate(+dm[1], +dm[2], now) : resolveDate(kstNow().getUTCMonth() + 1, kstNow().getUTCDate(), now);
+  const time = dm ? `${dm[3].padStart(2, '0')}:${dm[4]}` : null;
+  const merchant = (lines.slice(ai + 1).find(l => !/^\d{1,2}\/\d{1,2}/.test(l) && !/^(누적|잔액|한도|일시불|할부)/.test(l)) || '알 수 없음').replace(/\s+/g, ' ').trim();
+  const credit = /일시불|할부|개월/.test(lines[ai]) || /신용/.test(text);
+  return {
+    ok: true, kind: isCancel ? '취소' : '승인', isCancel, type: '지출', amount, date, time, merchant,
+    payment: credit ? '신용카드' : '체크카드', isSelfTransfer: false, isSafebox: false, balance: null, bank: '',
+    card: lines[head].replace(/\s*(승인|취소).*$/, '').trim(), isCardSms: true,
+  };
+}
+
 export function parseSms(text, now, opts = {}) {
   if (!text || typeof text !== 'string') return { ok: false, reason: '문자 내용이 비어 있어요' };
   const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
     .filter(s => !/^\[Web\s*발신\]$/.test(s));
+
+  const card = parseCardSms(lines, text, now);
+  if (card) return card;
 
   const amtIdx = lines.findIndex(l => !/^잔액/.test(l) && AMOUNT_LINE.test(l));
   if (amtIdx === -1) return { ok: false, reason: '금액 줄을 찾지 못했어요' };
