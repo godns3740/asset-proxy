@@ -619,6 +619,7 @@ const FIXED_ALIASES = [
   [/capcut|캡컷/i, /APPLE|CAPCUT/i],
   [/마운자로/, /브이에스라인|VS ?라인|VSLINE/i],
   [/비타민/, /와우바이오텍/],
+  [/가스/, /가스/],
   [/티빙/, /TVING|티빙/i],
   [/노션/, /NOTION|노션/i],
   [/이모티콘/, /이모티콘/],
@@ -627,6 +628,17 @@ const FIXED_ALIASES = [
 const normName = x => String(x || '').toLowerCase().replace(/[\s()（）\[\]·._+\-]/g, '');
 const FIXED_MANUAL = '고정 실제';   // 직접 입력한 실제 금액 표시 (subcategory)
 const _fxCache = new Map();
+// 이 지출이 어느 고정지출 항목인지
+function fixedItemsFor(t, items) {
+  const m = normName(memoName(t));
+  // 강한 일치: 문자 이름에 고정지출 이름이 들어 있음 ("대출이자+청약" → 대출이자, 청약)
+  let c = items.filter(f => { const n = normName(f.name); return n.length >= 2 && m.includes(n); });
+  if (!c.length) {
+    c = items.filter(f => { const n = normName(f.name); return (m.length >= 2 && n.includes(m)) || FIXED_ALIASES.some(([fr, sr]) => fr.test(f.name) && (sr.test(memoName(t)) || fr.test(memoName(t)))); });
+    if (c.length > 1) c = [c.sort((a, b) => Math.abs(a.amount - t.amount) - Math.abs(b.amount - t.amount))[0]];   // 금액이 가장 비슷한 것
+  }
+  return c;
+}
 function fixedStatus(key) {
   if (_fxCache.has(key)) return _fxCache.get(key);
   const { start, end } = cycleRange(key);
@@ -634,13 +646,7 @@ function fixedStatus(key) {
   const txs = S.tx.filter(t => t.type === '지출' && t.is_fixed && !isExcluded(t) && t.date >= start && t.date <= end);
   const byItem = new Map(), used = new Set(), unmatched = [];
   for (const t of txs) {
-    const m = normName(memoName(t));
-    // 강한 일치: 문자 이름에 고정지출 이름이 들어 있음 ("대출이자+청약" → 대출이자, 청약)
-    let c = items.filter(f => { const n = normName(f.name); return n.length >= 2 && m.includes(n); });
-    if (!c.length) {
-      c = items.filter(f => { const n = normName(f.name); return (m.length >= 2 && n.includes(m)) || FIXED_ALIASES.some(([fr, sr]) => fr.test(f.name) && (sr.test(memoName(t)) || fr.test(memoName(t)))); });
-      if (c.length > 1) c = [c.sort((a, b) => Math.abs(a.amount - t.amount) - Math.abs(b.amount - t.amount))[0]];   // 금액이 가장 비슷한 것
-    }
+    const c = fixedItemsFor(t, items);
     if (!c.length) { unmatched.push(t); continue; }
     c.forEach(f => { const r = byItem.get(f.id) || []; r.push({ t, group: c.length }); byItem.set(f.id, r); });
   }
@@ -1221,7 +1227,7 @@ function renderTogether() {
 }
 
 // ─── 처음 설정 ───────────────────────────────────────────────
-const ST_CATS = { 지출: ['외식', '배달', '커피/간식', '생활비', '장보기', '교통', '쇼핑/미용', '의료', '경조사', '데이트-식비', '데이트-오락', '술약속', '취미/여행/오락', '자기계발', '구독', '기타'], 수입: ['월급', '부수입', '기타수입', '정산'] };
+const ST_CATS = { 지출: ['외식', '배달', '커피/간식', '생활비', '교통', '쇼핑/미용', '의료', '경조사', '데이트-식비', '데이트-오락', '술약속', '취미/여행/오락', '자기계발', '구독', '기타'], 수입: ['월급', '부수입', '기타수입', '정산'] };
 const ST_FIXED = [['월세', '주거'], ['관리비', '주거'], ['휴대폰비', '통신'], ['인터넷', '통신'], ['보험', '보험'], ['대출이자', '대출'], ['적금', '저축'], ['청약', '저축'], ['넷플릭스', '구독'], ['유튜브 프리미엄', '구독'], ['쿠팡와우', '구독'], ['후불교통', '교통'], ['부모님 용돈', '가족'], ['커플 통장', '데이트-식비']];
 // 은행·카드: ok = 문자 형식을 이미 읽을 수 있음, match = 통장 문자에 카드값이 찍히는 이름
 const ST_BANKS = [
@@ -1492,6 +1498,7 @@ async function saveTx() {
   if (!txDraft.category) return toast('카테고리를 골라 주세요');
   const body = { date: $('#t-date').value || today(), type: txDraft.type, category: txDraft.category, payment: txDraft.payment, memo: $('#t-memo').value.trim(), amount, is_fixed: $('#t-fixed').checked };
   const prev = S.edit.tx ? S.tx.find(t => t.id === S.edit.tx) : null;
+  const wasFixed = !!(prev && prev.is_fixed);
   if ($('#t-except').checked) body.subcategory = EXCLUDED;
   else if (prev && isExcluded(prev)) body.subcategory = REVIEWED;
   if (prev && isSettle(prev)) {
@@ -1502,6 +1509,15 @@ async function saveTx() {
   try {
     if (S.edit.tx) { await api('transactions', { method: 'PATCH', body: { id: S.edit.tx, ...body } }); Object.assign(S.tx.find(t => t.id === S.edit.tx), body); toast('수정했어요'); }
     else { const r = await api('transactions', { method: 'POST', body }); S.tx.push({ ...(r && r[0] ? r[0] : { id: Date.now(), ...body }), amount }); toast('추가했어요'); }
+    // 고정으로 표시했는데 고정지출 목록에 맞는 항목이 없으면 목록에 바로 추가 (다음 달부터 예상 금액에도 들어감)
+    if (body.type === '지출' && body.is_fixed && !wasFixed && !fixedItemsFor(body, S.fixed.filter(f => f.is_active !== false)).length) {
+      const name = memoName(body).replace(/\d+월(-?\d+건)?/g, '').replace(/\s*\([^)]*\)\s*$/, '').replace(/[-\s]+$/, '').trim() || body.category;
+      try {
+        const fr = await api('fixed', { method: 'POST', body: { name, amount, category: body.category, is_active: true } });
+        S.fixed.push(fr && fr[0] ? fr[0] : { id: Date.now(), name, amount, category: body.category, is_active: true });
+        toast(`고정지출 목록에 '${name}' 추가했어요`);
+      } catch (e) { toast('고정지출 목록 추가 실패: ' + e.message); }
+    }
     closeSheets(); render();
   } catch (e) { toast('저장 실패: ' + e.message); } finally { btn.disabled = false; }
 }
