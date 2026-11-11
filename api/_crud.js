@@ -21,6 +21,7 @@ async function relay(r, res, okStatus) {
     if (/owner/.test(msg) && /column|does not exist/.test(msg)) {
       return res.status(500).json({ error: msg, message: 'DB에 owner 칸이 없어요. docs/supabase-multiuser.sql 을 Supabase에서 실행해 주세요.' });
     }
+    if (r.status === 409 || /duplicate key/.test(msg)) return res.status(409).json({ error: msg, message: '같은 이름이 이미 있어요' });
     return res.status(r.status).json({ error: msg, message: `DB 오류: ${msg}` });
   }
   return res.status(okStatus).json(data);

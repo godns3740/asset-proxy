@@ -1373,6 +1373,8 @@ async function saveSetup() {
     const sms = d.assets.filter(a => a.name.trim() && a.sms);
     if (sms.length) settings.balanceAssets = { ...(settings.balanceAssets || {}), ...Object.fromEntries(sms.map(a => [a.sms, a.name.trim()])) };
     const cats = [...d.cats.filter(c => c.on && !c.have), ...d.extraCat.split(',').map(x => x.trim()).filter(Boolean).map(name => ({ type: '지출', name }))]
+      // 직접 추가한 이름이 이미 있거나 겹치면 한 번만
+      .filter((c, k, arr) => !S.cats.some(x => x.type === c.type && x.name === c.name) && arr.findIndex(y => y.type === c.type && y.name === c.name) === k)
       .map((c, k) => ({ name: c.name, type: c.type, color: PALETTE[k % PALETTE.length] }));
     const fixed = d.fixed.filter(f => f.on && f.name.trim() && digits(f.amount)).map(f => ({ name: f.name.trim(), amount: digits(f.amount), category: f.category || '기타', is_active: true }));
     const assets = d.assets.filter(a => a.name.trim()).map(a => {
