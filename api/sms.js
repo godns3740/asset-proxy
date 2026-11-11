@@ -132,6 +132,12 @@ export default async function handler(req, res) {
     const memo = p.time ? `${p.merchant} · ${p.time}` : p.merchant;
     const tx = { date: p.date, type: p.type, category, payment: guessPayment(p, ruleCategory, fixedHit), memo, amount: p.amount, is_fixed: !!fixedHit, owner: me };
 
+    // 내 다른 계좌로 보내서 내는 고정지출 (예: 한화생명·여행 적립): settings.selfFixed 에 적은 항목과 금액이 같으면 고정지출로 기록
+    const selfFixed = (profile.settings.selfFixed || []).filter(Boolean);
+    const selfHit = p.isSelfTransfer && !p.isSafebox && p.kind === '출금' && Array.isArray(fixedList)
+      ? fixedList.find(f => f.is_active !== false && selfFixed.includes(f.name) && Number(f.amount) === p.amount) : null;
+    if (selfHit) Object.assign(tx, { type: '지출', category: selfHit.category || category, payment: '계좌이체', is_fixed: true, memo: `${selfHit.name} (내 계좌로 이체)${p.time ? ' · ' + p.time : ''}` });
+
     if (req.query?.dryRun) return res.status(200).json({ ok: true, dryRun: true, parsed: p, transaction: tx });
 
     const q = s => encodeURIComponent(s);
@@ -147,7 +153,7 @@ export default async function handler(req, res) {
     }
 
     // 내 계좌끼리 옮긴 돈은 수입/지출이 아니므로 기록하지 않습니다.
-    if (p.isSelfTransfer) {
+    if (p.isSelfTransfer && !selfHit) {
       const what = p.isSafebox ? (p.kind === '출금' ? '세이프박스에 넣음' : '세이프박스에서 꺼냄') : '내 계좌 이체';
       return res.status(200).json({ ok: true, ignored: true, message: `${what} ${won(p.amount)} · 기록 안 함${syncMsg}` });
     }
@@ -178,7 +184,7 @@ export default async function handler(req, res) {
     const settleNote = tx.settleNote; delete tx.settleNote;
 
     // 같은 문자를 두 번 보내도 한 번만 저장합니다.
-    const dr = await fetch(`${base}/transactions?select=id${mine}&date=eq.${p.date}&type=eq.${q(p.type)}&amount=eq.${p.amount}&memo=eq.${q(memo)}&limit=1`, { headers: headers() });
+    const dr = await fetch(`${base}/transactions?select=id${mine}&date=eq.${p.date}&type=eq.${q(p.type)}&amount=eq.${p.amount}&memo=eq.${q(tx.memo)}&limit=1`, { headers: headers() });
     const dup = await dr.json();
     if (Array.isArray(dup) && dup[0]) {
       return res.status(200).json({ ok: true, duplicate: true, id: dup[0].id, message: `이미 기록됨: ${p.merchant} ${won(p.amount)}` });
@@ -189,7 +195,7 @@ export default async function handler(req, res) {
     if (!ir.ok) return res.status(502).json({ ok: false, message: `저장 실패: ${saved?.message || ir.status}`, detail: saved });
     const sign = p.type === '수입' ? '+' : '-';
     if (settleNote) return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `정산 +${won(p.amount)} (${p.merchant}) · ${settleNote}${syncMsg}` });
-    return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${tx.is_fixed ? '고정 ' : ''}${category} ${sign}${won(p.amount)} (${p.merchant})${syncMsg}` });
+    return res.status(201).json({ ok: true, id: saved?.[0]?.id, transaction: tx, message: `${tx.is_fixed ? '고정 ' : ''}${selfHit ? selfHit.name : category} ${sign}${won(p.amount)} (${p.merchant})${syncMsg}` });
   } catch (e) {
     return res.status(500).json({ ok: false, message: `서버 오류: ${e.message}` });
   }
