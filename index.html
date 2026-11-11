@@ -1212,7 +1212,7 @@ const ST_BANKS = [
   { k: '신한은행', kind: 'bank', ok: true, how: '신한 SOL뱅크 앱 → 전체메뉴 → 알림 설정 → 입출금 알림 → 문자(SMS).' },
   { k: '토스뱅크', kind: 'bank', ok: false, none: true, how: '토스뱅크는 문자 알림을 지원하지 않는 것 같아요. 결제·월급은 문자가 오는 통장·카드로 모으는 걸 추천해요.' },
   { k: 'KB국민은행', kind: 'bank' }, { k: '우리은행', kind: 'bank' }, { k: '하나은행', kind: 'bank' }, { k: 'NH농협', kind: 'bank' },
-  { k: 'IBK기업은행', kind: 'bank' }, { k: '케이뱅크', kind: 'bank' }, { k: '새마을금고', kind: 'bank' },
+  { k: 'IBK기업은행', kind: 'bank' }, { k: '케이뱅크', kind: 'bank' }, { k: '새마을금고', kind: 'bank', ok: true, how: 'MG새마을금고 앱(MG더뱅킹) → 설정 → 알림 설정 → 입출금 알림 → 문자(SMS).' },
   { k: '현대카드', kind: 'card', match: ['현대카드'] }, { k: '삼성카드', kind: 'card', match: ['삼성카드'] }, { k: '신한카드', kind: 'card', match: ['신한카드'] },
   { k: 'KB국민카드', kind: 'card', match: ['국민카드', 'KB카드'] }, { k: '롯데카드', kind: 'card', match: ['롯데카드'] }, { k: '하나카드', kind: 'card', match: ['하나카드'] },
   { k: '우리카드', kind: 'card', match: ['우리카드'] }, { k: 'BC카드', kind: 'card', match: ['BC카드', '비씨카드'] }, { k: 'NH농협카드', kind: 'card', match: ['농협카드', 'NH카드'] },
@@ -1327,7 +1327,7 @@ function renderSetup() {
             <input class="input num" data-as-qty="${k}" inputmode="decimal" placeholder="수량 (주)" value="${esc(a.qty)}"></div>
           <div class="sub" style="font-size:12px;margin-top:6px">코드와 수량만 있으면 평가금은 시세로 자동 계산돼요.</div>`
         : `<input class="input num" data-as-amt="${k}" inputmode="numeric" placeholder="지금 잔액" value="${esc(a.amount)}">
-          ${a.kind === '입출금' ? `<select data-as-sms="${k}" style="width:100%;margin-top:8px;padding:9px 8px;font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text)"><option value="">문자로 잔액 맞추기: 안 함</option><option value="카카오뱅크" ${a.sms === '카카오뱅크' ? 'selected' : ''}>카카오뱅크 문자로 잔액 자동 맞추기</option><option value="신한" ${a.sms === '신한' ? 'selected' : ''}>신한 문자로 잔액 자동 맞추기</option></select>` : ''}
+          ${a.kind === '입출금' ? `<select data-as-sms="${k}" style="width:100%;margin-top:8px;padding:9px 8px;font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text)"><option value="">문자로 잔액 맞추기: 안 함</option><option value="카카오뱅크" ${a.sms === '카카오뱅크' ? 'selected' : ''}>카카오뱅크 문자로 잔액 자동 맞추기</option><option value="신한" ${a.sms === '신한' ? 'selected' : ''}>신한 문자로 잔액 자동 맞추기</option><option value="새마을금고" ${a.sms === '새마을금고' ? 'selected' : ''}>새마을금고 문자로 잔액 자동 맞추기</option></select>` : ''}
           ${a.kind === '모임통장' ? '<div class="sub" style="font-size:12px;margin-top:6px">모임통장은 보여 주기만 하고 내 돈 합계에서는 빠져요.</div>' : ''}`}
       </div>`;
     }).join('') : '<div class="empty" style="padding:16px 0">위 버튼으로 자산을 추가해 주세요<br><span style="font-size:12px">토스 "내 계좌" 화면을 캡처해서 보내 주시면 대신 넣어 드릴 수도 있어요</span></div>'}

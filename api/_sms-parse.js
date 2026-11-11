@@ -42,7 +42,12 @@ export function parseSms(text, now, opts = {}) {
   // 금액 다음 줄이 가맹점/상대방. 없으면 금액 줄에서 금액·종류를 뺀 나머지.
   let merchant = lines.slice(amtIdx + 1).find(l => !/^잔액|^누적|^한도|^[\d-]{8,}$/.test(l));
   if (!merchant) {
-    merchant = lines[amtIdx].replace(AMOUNT_LINE, '').trim();
+    // 한 줄 형식 (새마을금고 등): "<새마을금고>900330**8 박규원 입금1 잔액557,692원 11/11 19:25"
+    //  → "입금/출금" 바로 앞 단어가 상대방
+    const before = lines[amtIdx].split(/(입금|출금|결제|승인|사용|취소)/)[0]
+      .replace(/<[^>]*>|\[[^\]]*\]/g, ' ')            // <은행> [은행] 표시
+      .split(/\s+/).filter(w => w && !/^[\d*\-]+$/.test(w) && !/\d{2}\/\d{2}|\d{1,2}:\d{2}/.test(w));   // 계좌번호·날짜·시간
+    merchant = before.length ? before[before.length - 1] : lines[amtIdx].replace(AMOUNT_LINE, '').trim();
   }
   merchant = (merchant || '').replace(/\s+/g, ' ').trim() || '알 수 없음';
 
@@ -67,7 +72,7 @@ export function parseSms(text, now, opts = {}) {
   // 잔액·은행: 통장별 잔액을 맞추는 데 씁니다
   const bm = text.match(/잔액\s*([\d,]+)/);
   const balance = bm ? parseInt(bm[1].replace(/,/g, ''), 10) : null;
-  const bank = /카카오뱅크/.test(text) ? '카카오뱅크' : /(^|\n)\s*신한/.test(text) ? '신한' : '';
+  const bank = /카카오뱅크/.test(text) ? '카카오뱅크' : /새마을금고/.test(text) ? '새마을금고' : /(^|\n)\s*신한/.test(text) ? '신한' : '';
 
   return { ok: true, kind, isCancel, type, amount, date, time, merchant, payment, isSelfTransfer, isSafebox, balance, bank };
 }
