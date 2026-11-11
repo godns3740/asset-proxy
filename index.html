@@ -7,7 +7,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="가계부">
 <meta name="theme-color" content="#0e0f11">
-<title>규원의 가계부</title>
+<title>가계부</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{
@@ -1743,6 +1746,9 @@ $('#st-body').addEventListener('click', async e => {
 });
 $('#rv-body').addEventListener('input', e => { if (e.target.id === 'rv-name' && S.rvDraft) S.rvDraft.name = e.target.value; });
 $('#rv-body').addEventListener('change', e => { if (e.target.id === 'rv-same' && S.rvDraft) S.rvDraft.same = e.target.checked; });
+
+// 홈 화면 앱: 화면을 휴대폰에 저장해서 빠르게 열기
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 
 boot();
 </script>
