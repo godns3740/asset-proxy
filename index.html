@@ -682,7 +682,8 @@ function cycleSummary(key) {
   varTx.forEach(t => { byCat[t.category] = (byCat[t.category] || 0) + t.amount; });
   // 돌려받은 돈은 대신 낸 결제의 카테고리에서 뺌
   let settled = 0;
-  txs.filter(isSettle).forEach(st => { const tg = S.tx.find(x => x.id === settleTarget(st)); const c = tg ? tg.category : '기타'; byCat[c] = (byCat[c] || 0) - st.amount; settled += st.amount; });
+  // 예산 제외 지출을 돌려받은 돈은 쓴 돈에도 들어가지 않음
+  txs.filter(isSettle).forEach(st => { const tg = S.tx.find(x => x.id === settleTarget(st)); if (tg && (isExcluded(tg) || tg.is_fixed)) return; const c = tg ? tg.category : '기타'; byCat[c] = (byCat[c] || 0) - st.amount; settled += st.amount; });
   Object.keys(byCat).forEach(k => { if (byCat[k] <= 0) delete byCat[k]; });
   const variable = varTx.reduce((s, t) => s + t.amount, 0) - settled;
   const salary = txs.filter(t => t.type === '수입' && SALARY_CATS.includes(t.category)).reduce((s, t) => s + t.amount, 0);
@@ -839,7 +840,8 @@ const REVIEWED = '확인함';
 const EXCLUDED = '예산 제외';   // 특별 지출: 내역엔 남지만 예산 계산에서 빠짐
 function isExcluded(t) { return t.subcategory === EXCLUDED; }
 // 더치페이 정산: 사람에게 돌려받은 돈을 대신 낸 결제에서 뺌 (subcategory '정산:<결제 id>')
-function isSettle(t) { return t.type === '수입' && /^정산:/.test(t.subcategory || ''); }
+// 정산: 대신 낸 결제와 연결된 입금(정산:<id>) 또는 카테고리를 '정산'으로 고른 입금 → 수입이 아니라 쓴 돈에서 뺌
+function isSettle(t) { return t.type === '수입' && (/^정산:/.test(t.subcategory || '') || t.category === '정산'); }
 function settleTarget(t) { const m = /^정산:(\d+)/.exec(t.subcategory || ''); return m ? +m[1] : null; }
 function settledOf(id) { return S.tx.filter(x => isSettle(x) && settleTarget(x) === id).reduce((a, x) => a + x.amount, 0); }
 const isAutoRecorded = t => / · \d{2}:\d{2}$/.test(t.memo || '');

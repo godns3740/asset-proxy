@@ -1,7 +1,7 @@
 // 더치페이 정산: 내가 대신 결제한 뒤 사람 이름으로 들어온 돈을 그 결제에서 빼 줍니다.
 // 정산 입금은 subcategory = '정산:<결제 id>' 로 표시하고, 수입 합계에는 넣지 않습니다.
 export const SETTLE_CAT = '정산';
-export const isSettle = t => t.type === '수입' && /^정산:/.test(t.subcategory || '');
+export const isSettle = t => t.type === '수입' && (/^정산:/.test(t.subcategory || '') || t.category === SETTLE_CAT);
 export const settleTarget = t => { const m = /^정산:(\d+)/.exec(t.subcategory || ''); return m ? +m[1] : null; };
 
 const timeOf = t => { const m = / · (\d{2}):(\d{2})$/.exec(t.memo || ''); return m ? `${m[1]}:${m[2]}` : '00:00'; };
@@ -28,6 +28,7 @@ export function applySettlements(txs, varTx, byCat, all) {
   let total = 0;
   txs.filter(isSettle).forEach(s => {
     const target = byId.get(settleTarget(s));
+    if (target && (target.subcategory === '예산 제외' || target.is_fixed)) return;
     const cat = target ? target.category : '기타';
     byCat[cat] = (byCat[cat] || 0) - Number(s.amount);
     total += Number(s.amount);
