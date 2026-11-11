@@ -657,7 +657,8 @@ function fixedStatus(key) {
     return { f, tx: best ? best.t : null, group: best ? best.group : 0, manual: !!manual };
   });
   let paid = 0, pending = 0;
-  rows.forEach(r => { if (r.tx && !used.has(r.tx.id)) { used.add(r.tx.id); paid += r.tx.amount; } });
+  // 돌려받은 돈(정산, 예: 회사 대출이자 지원)은 그 고정지출에서 뺌
+  rows.forEach(r => { r.back = r.tx ? Math.min(r.tx.amount, settledOf(r.tx.id)) : 0; if (r.tx && !used.has(r.tx.id)) { used.add(r.tx.id); paid += r.tx.amount - r.back; } });
   const extra = unmatched.reduce((a, t) => a + t.amount, 0);
   const res = { start, end, rows, unmatched, paid: paid + extra, pending: 0, total: 0 };
   _fxCache.set(key, res);
@@ -672,7 +673,7 @@ function expectedFixed(f, key) {
     const k = ymShift(key, -i);
     if (k < cycleBounds().first) break;
     const r = fixedStatus(k).rows.find(x => x.f.id === f.id);
-    if (r && r.tx && r.group === 1) vals.push(r.tx.amount);
+    if (r && r.tx && r.group === 1) vals.push(r.tx.amount - (r.back || 0));
   }
   return vals.length ? { amount: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length), avg: vals.length } : { amount: Number(f.amount), avg: 0 };
 }
@@ -943,17 +944,18 @@ function renderFixed() {
   const names = Object.keys(groups).sort();
   const rowHtml = r => {
     if (r.off) return `<button class="row off" data-fx="${r.f.id}"><span class="grow"><span class="t1" style="display:block">${esc(r.f.name)}</span><span class="fx-st wait" style="display:block">꺼 둠</span></span><span class="amt-col"><span class="amt num">${W(Number(r.f.amount))}</span></span></button>`;
-    const amt = r.tx ? r.tx.amount : r.exp.amount;
+    const amt = r.tx ? r.tx.amount - (r.back || 0) : r.exp.amount;
     const expTxt = r.exp.avg ? `최근 ${r.exp.avg}달 평균 ${W(r.exp.amount)}` : `예상 ${W(r.exp.amount)}`;
     const status = r.tx
       ? `<span class="fx-st paid" style="display:block">✓ ${fmtMD(r.tx.date)} ${r.manual ? '직접 입력' : (r.group > 1 ? `함께 빠져나감 (${esc(memoName(r.tx))})` : '빠져나감')}</span>`
       : `<span class="fx-st wait" style="display:block">아직 · ${expTxt}</span>`;
-    const diff = r.tx && r.group === 1 && r.tx.amount !== r.exp.amount ? `<span class="sub2 num" style="display:block">${expTxt}</span>` : '';
+    const diff = (r.back ? `<span class="sub2 num" style="display:block;color:var(--accent)">${W(r.tx.amount)} − 돌려받음 ${W(r.back)}</span>` : '')
+      + (r.tx && r.group === 1 && amt !== r.exp.amount ? `<span class="sub2 num" style="display:block">${expTxt}</span>` : '');
     return `<button class="row" data-fx="${r.f.id}"><span class="grow"><span class="t1" style="display:block">${esc(r.f.name)}</span>${status}</span>
       <span class="amt-col"><span class="amt num ${r.tx ? '' : 'muted'}">${r.tx && r.group > 1 ? '—' : W(amt)}</span>${diff}</span></button>`;
   };
   let html = names.map(g => {
-    const sum = groups[g].filter(r => !r.off).reduce((a, r) => a + (r.tx ? (r.group > 1 ? 0 : r.tx.amount) : r.exp.amount), 0);
+    const sum = groups[g].filter(r => !r.off).reduce((a, r) => a + (r.tx ? (r.group > 1 ? 0 : r.tx.amount - (r.back || 0)) : r.exp.amount), 0);
     return `<div class="card"><h2>${esc(g)} <span class="num" style="color:var(--text)">${W(sum)}</span></h2>${groups[g].map(rowHtml).join('')}</div>`;
   }).join('');
   if (st.unmatched.length) html += `<div class="card"><h2>목록에 없는 고정지출 <span class="num" style="color:var(--text)">${W(st.unmatched.reduce((a, t) => a + t.amount, 0))}</span></h2>${st.unmatched.map(txRow).join('')}</div>`;

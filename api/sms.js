@@ -171,8 +171,21 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, ignored: true, message: `취소 문자지만 원래 결제를 못 찾았어요: ${p.merchant} ${won(p.amount)}` });
     }
 
+    // 고정지출 환급: settings.fixedRefunds [{ from: '삼성전자', fixed: '대출이자' }] — 회사가 대출이자 일부를 돌려주는 경우
+    const refund = p.type === '수입' && !['월급', '급여'].includes(tx.category)
+      ? (profile.settings.fixedRefunds || []).find(x => x && x.from && x.fixed && p.merchant.includes(x.from)) : null;
+    if (refund) {
+      const since = new Date(Date.parse(p.date) - 62 * 86400e3).toISOString().slice(0, 10);
+      const rr = await fetch(`${base}/transactions?select=id,amount,memo,date${mine}&type=eq.${q('지출')}&is_fixed=eq.true&memo=like.${q('*' + refund.fixed + '*')}&date=gte.${since}&date=lte.${p.date}&order=date.desc&limit=1`, { headers: headers() });
+      const hit = (await rr.json().catch(() => []))[0];
+      if (hit && Number(hit.amount) >= p.amount) {
+        tx.category = SETTLE_CAT; tx.subcategory = `정산:${hit.id}`;
+        tx.settleNote = `${refund.fixed} ${won(Number(hit.amount))}에서 돌려받음 → 내 몫 ${won(Number(hit.amount) - p.amount)}`;
+      }
+    }
+
     // 더치페이 정산: 사람 이름으로 들어온 돈이 최근 내 결제와 맞으면 그 결제에서 뺍니다
-    if (p.type === '수입' && /^[가-힣]{2,4}$/.test(p.merchant) && !['월급', '급여'].includes(tx.category)) {
+    if (!refund && p.type === '수입' && /^[가-힣]{2,4}$/.test(p.merchant) && !['월급', '급여'].includes(tx.category)) {
       const since = new Date(Date.parse(p.date) - 86400e3).toISOString().slice(0, 10);
       const rr = await fetch(`${base}/transactions?select=id,date,type,category,amount,memo,is_fixed,subcategory,payment${mine}&date=gte.${since}&date=lte.${p.date}`, { headers: headers() });
       const recent = await rr.json().catch(() => []);
