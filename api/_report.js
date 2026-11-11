@@ -33,7 +33,7 @@ export function buildReport(budget, key, cats = []) {
   if (topShop) notes.push(`${topShop.name}에서 ${topShop.n}번, ${W(topShop.sum)}을 썼어요.`);
   if (s.salary && fx.total / s.salary > 0.6) notes.push(`고정지출이 월급의 ${Math.round(fx.total / s.salary * 100)}%예요. 구독·보험 중 줄일 수 있는 게 있는지 한 번 점검해 보세요.`);
   if (s.remain >= 0) notes.push(`${man(s.remain)}을 남겼어요. 남은 돈은 세이프박스나 적금으로 옮겨 두면 다음 달 예산이 깔끔해져요.`);
-  else notes.push(`${man(-s.remain)} 초과했어요. 다음 달엔 변동지출 목표를 ${man(Math.max(0, s.variable + s.remain))} 안쪽으로 잡아 보세요.`);
+  else notes.push(`${man(-s.remain)} 초과했어요. 다음 달엔 쓴 돈 목표를 ${man(Math.max(0, s.variable + s.remain))} 안쪽으로 잡아 보세요.`);
 
   return {
     key, title: `${midMonthLabel(s.start, s.end)} 결산`, period: `${dot(s.start)} ~ ${dot(s.end)}`,
@@ -49,7 +49,7 @@ export function buildReport(budget, key, cats = []) {
 export function notifyText(r) {
   const res = r.remain >= 0 ? `${man(r.remain)} 남김` : `${man(-r.remain)} 초과`;
   const diff = r.variable - r.prevVariable;
-  return `${r.title} · ${res} · 변동지출 ${man(r.variable)}${r.prevVariable ? ` (지난달 대비 ${signedMan(diff)})` : ''}`;
+  return `${r.title} · ${res} · 쓴 돈 ${man(r.variable)}${r.prevVariable ? ` (지난달 대비 ${signedMan(diff)})` : ''}`;
 }
 
 // ─── PDF ─────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ export function renderPdf(r) {
     const cards = [
       ['수입', W(r.income), C.green],
       ['고정지출', W(r.fixed), C.text],
-      ['변동지출', W(r.variable), C.text],
+      ['쓴 돈', W(r.variable), C.text],
       [r.remain >= 0 ? '남긴 돈' : '초과', W(Math.abs(r.remain)), r.remain >= 0 ? C.green : C.red],
     ];
     const cw = (Wd - 3 * 8) / 4;
@@ -90,14 +90,14 @@ export function renderPdf(r) {
     });
     y += 70;
     const sub = [];
-    if (r.prevVariable) sub.push(`변동지출 지난달 대비 ${signedMan(r.variable - r.prevVariable)}`);
+    if (r.prevVariable) sub.push(`쓴 돈 지난달 대비 ${signedMan(r.variable - r.prevVariable)}`);
     if (r.prevRemain !== null) sub.push(`지난달 ${r.prevRemain >= 0 ? '남긴 돈' : '초과'} ${man(Math.abs(r.prevRemain))}`);
     sub.push(`고정지출 중 실제 ${man(r.fixedPaid)} · 예상 ${man(r.fixedPending)}`);
     text(sub.join('   ·   '), L, y, { size: 9, color: C.sub, width: Wd }); y += 16;
     if (r.excluded) { text(`특별 지출(예산 제외) ${W(r.excluded)}: ${r.excludedTx.map(t => t.name).join(', ')}`, L, y, { size: 9, color: C.blue, width: Wd }); y += 16; }
 
     // 카테고리
-    section(r.hasPrev ? '어디에 썼나 · 변동지출 (지난달 대비)' : '어디에 썼나 · 변동지출');
+    section(r.hasPrev ? '어디에 썼나 · 쓴 돈 (지난달 대비)' : '어디에 썼나 · 쓴 돈');
     const max = Math.max(1, ...r.catRows.map(c => c.now));
     r.catRows.forEach(c => {
       need(22);
@@ -111,7 +111,7 @@ export function renderPdf(r) {
       else if (r.hasPrev) text('새로 생김', L + 455, y, { size: 9, color: C.sub, width: 60, align: 'right' });
       y += 20;
     });
-    if (!r.catRows.length) { text('변동지출이 없어요', L, y, { color: C.sub }); y += 18; }
+    if (!r.catRows.length) { text('쓴 돈이 없어요', L, y, { color: C.sub }); y += 18; }
 
     // 많이 쓴 곳
     section('많이 쓴 곳 TOP 5');
@@ -150,7 +150,7 @@ export function mailHtml(r) {
   return `<div style="font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;max-width:480px;color:#111827">
   <h2 style="margin:0 0 4px">${esc(r.title)}</h2><div style="color:#6b7280;margin-bottom:14px">${esc(r.period)}</div>
   <table style="width:100%;border-collapse:collapse;font-size:15px">
-  ${row('수입', W(r.income), '#16a34a')}${row('고정지출', W(r.fixed))}${row('변동지출', W(r.variable))}
+  ${row('수입', W(r.income), '#16a34a')}${row('고정지출', W(r.fixed))}${row('쓴 돈', W(r.variable))}
   ${row(r.remain >= 0 ? '남긴 돈' : '초과', W(Math.abs(r.remain)), r.remain >= 0 ? '#16a34a' : '#dc2626')}
   ${r.excluded ? row('특별 지출(예산 제외)', W(r.excluded), '#2563eb') : ''}</table>
   <ul style="padding-left:18px;color:#374151;font-size:14px">${r.notes.map(n => `<li style="margin:4px 0">${esc(n)}</li>`).join('')}</ul>

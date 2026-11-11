@@ -291,7 +291,7 @@ body.together .tabs,body.together .fab{display:none!important}
       <div class="stats">
         <div class="stat"><div class="k">수입</div><div class="v num up" id="h-income">—</div></div>
         <div class="stat"><div class="k">고정지출</div><div class="v num" id="h-fixed">—</div></div>
-        <div class="stat"><div class="k">변동지출</div><div class="v num" id="h-var">—</div></div>
+        <div class="stat"><div class="k">쓴 돈</div><div class="v num" id="h-var">—</div></div>
       </div>
 
       <div class="card">
@@ -457,7 +457,7 @@ body.together .tabs,body.together .fab{display:none!important}
   <div class="field"><label>날짜</label><input class="input" id="t-date" type="date"></div>
   <div class="field"><label>카테고리</label><div class="pick" id="t-cats"></div></div>
   <div class="field"><label>결제수단</label><div class="pick" id="t-pay"></div></div>
-  <div class="field"><label class="check"><input type="checkbox" id="t-fixed"> 고정지출 (변동지출 합계에서 빼기)</label></div>
+  <div class="field"><label class="check"><input type="checkbox" id="t-fixed"> 고정지출 (쓴 돈 합계에서 빼기)</label></div>
   <div class="field"><label class="check"><input type="checkbox" id="t-except"> 특별 지출 · 이번 달 예산에서 빼기 (생신 선물, 큰 경조사 등)</label></div>
   <div class="field hidden" id="t-settle-box"><label class="check"><input type="checkbox" id="t-settle"> <span id="t-settle-label">정산 · 내가 낸 결제에서 빼기</span></label></div>
   <div class="sheet-actions">
@@ -762,7 +762,7 @@ function renderHome() {
     daily.className = 'daily';
     $('#h-bar').className = 'bar';
     $('#h-bar i').style.width = '0%';
-    $('#h-spent').textContent = `변동지출 ${W(s.variable)}`;
+    $('#h-spent').textContent = `쓴 돈 ${W(s.variable)}`;
     $('#h-usable').textContent = '월급이 들어오면 계산돼요';
   } else {
     $('.hero .label').textContent = '쓸 수 있는 돈';
@@ -778,7 +778,7 @@ function renderHome() {
     const pct = s.usable > 0 ? Math.min(100, s.variable / s.usable * 100) : (s.variable > 0 ? 100 : 0);
     $('#h-bar').className = 'bar' + (s.remain < 0 ? ' over' : '');
     $('#h-bar i').style.width = pct + '%';
-    $('#h-spent').textContent = `변동지출 ${W(s.variable)}`;
+    $('#h-spent').textContent = `쓴 돈 ${W(s.variable)}`;
     $('#h-usable').textContent = `사용 가능 ${W(Math.max(0, s.usable))}`;
   }
   $('#h-income').textContent = short(s.income);
@@ -1187,7 +1187,7 @@ function renderTogether() {
       <div class="sub" style="font-size:11px">${has ? (x.s.remain >= 0 ? '남은 돈' : '초과') : '월급 전 · 쓴 돈'}</div>
       <div class="ln"><span>수입</span><span class="num">${short(x.s.income)}</span></div>
       <div class="ln"><span>고정</span><span class="num">${short(x.s.fixed)}</span></div>
-      <div class="ln"><span>변동</span><span class="num">${short(x.s.variable)}</span></div>
+      <div class="ln"><span>쓴 돈</span><span class="num">${short(x.s.variable)}</span></div>
       ${x.s.excluded ? `<div class="ln"><span>특별</span><span class="num">${short(x.s.excluded)}</span></div>` : ''}</div>`;
   };
   const sum = f => ppl.reduce((a, x) => a + f(x), 0);
@@ -1203,7 +1203,7 @@ function renderTogether() {
     <div class="card"><h2>둘이 합치면</h2>
       <div class="ln stat-row" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
         <div class="stat"><div class="k">수입</div><div class="v num up">${short(sum(x => x.s.income))}</div></div>
-        <div class="stat"><div class="k">변동지출</div><div class="v num">${short(sum(x => x.s.variable))}</div></div>
+        <div class="stat"><div class="k">쓴 돈</div><div class="v num">${short(sum(x => x.s.variable))}</div></div>
         <div class="stat"><div class="k">데이트</div><div class="v num" style="color:#f9a8d4">${short(dateTotal)}</div></div>
       </div></div>
     <div class="card"><h2>어디에 썼나 · 나란히</h2>
