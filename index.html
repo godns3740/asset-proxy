@@ -437,6 +437,13 @@ body.together .tabs,body.together .fab{display:none!important}
 <div class="sheet" id="sh-tx" role="dialog" aria-modal="true">
   <div class="grab"></div>
   <h3 id="sh-tx-title">내역 추가</h3>
+  <div id="t-sms-box" class="hidden" style="margin:-6px 0 14px">
+    <button class="btn ghost small" id="t-sms-toggle">📋 문자 붙여 넣어 기록하기</button>
+    <div id="t-sms-area" class="hidden" style="margin-top:8px">
+      <textarea class="input" id="t-sms-text" rows="5" placeholder="놓친 결제·입출금 문자를 길게 눌러 복사해서 붙여 넣으세요"></textarea>
+      <button class="btn primary" id="t-sms-send" style="width:100%;margin-top:8px">문자로 기록하기</button>
+    </div>
+  </div>
   <div class="type-toggle" id="t-type">
     <button data-t="지출" class="exp on">지출</button>
     <button data-t="수입" class="inc">수입</button>
@@ -1213,7 +1220,7 @@ const ST_BANKS = [
   { k: '토스뱅크', kind: 'bank', ok: false, none: true, how: '토스뱅크는 문자 알림을 지원하지 않는 것 같아요. 결제·월급은 문자가 오는 통장·카드로 모으는 걸 추천해요.' },
   { k: 'KB국민은행', kind: 'bank' }, { k: '우리은행', kind: 'bank' }, { k: '하나은행', kind: 'bank' }, { k: 'NH농협', kind: 'bank' },
   { k: 'IBK기업은행', kind: 'bank' }, { k: '케이뱅크', kind: 'bank' }, { k: '새마을금고', kind: 'bank', ok: true, how: 'MG새마을금고 앱(MG더뱅킹) → 설정 → 알림 설정 → 입출금 알림 → 문자(SMS).' },
-  { k: '현대카드', kind: 'card', match: ['현대카드'] }, { k: '삼성카드', kind: 'card', match: ['삼성카드'] }, { k: '신한카드', kind: 'card', match: ['신한카드'] },
+  { k: '현대카드', kind: 'card', ok: true, match: ['현대카드'] }, { k: '삼성카드', kind: 'card', match: ['삼성카드'] }, { k: '신한카드', kind: 'card', match: ['신한카드'] },
   { k: 'KB국민카드', kind: 'card', match: ['국민카드', 'KB카드'] }, { k: '롯데카드', kind: 'card', match: ['롯데카드'] }, { k: '하나카드', kind: 'card', match: ['하나카드'] },
   { k: '우리카드', kind: 'card', match: ['우리카드'] }, { k: 'BC카드', kind: 'card', match: ['BC카드', '비씨카드'] }, { k: 'NH농협카드', kind: 'card', match: ['농협카드', 'NH카드'] },
 ];
@@ -1464,6 +1471,8 @@ function openTx(id) {
   if (t && isSettle(t)) { const tg = S.tx.find(x => x.id === settleTarget(t)); $('#t-settle').checked = true; $('#t-settle-label').textContent = `정산 · ${tg ? memoName(tg) + ' ' + W(tg.amount) : '대신 낸 결제'}에서 빼기 (끄면 수입으로)`; }
   $('#t-del').classList.toggle('hidden', !t);
   renderTxPickers();
+  $('#t-sms-box').classList.toggle('hidden', !!t);
+  $('#t-sms-area').classList.add('hidden'); $('#t-sms-text').value = '';
   openSheet('#sh-tx');
   if (!t) setTimeout(() => $('#t-amount').focus(), 250);
 }
@@ -1648,6 +1657,18 @@ $('#t-type').addEventListener('click', e => { const b = e.target.closest('[data-
 $('#t-cats').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (!b) return; txDraft.category = b.dataset.c; renderTxPickers(); });
 $('#t-pay').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; txDraft.payment = b.dataset.p; renderTxPickers(); });
 $('#t-save').addEventListener('click', saveTx);
+$('#t-sms-toggle').addEventListener('click', () => { $('#t-sms-area').classList.toggle('hidden'); setTimeout(() => $('#t-sms-text').focus(), 50); });
+$('#t-sms-send').addEventListener('click', async () => {
+  const text = $('#t-sms-text').value.trim();
+  if (!text) return toast('문자를 붙여 넣어 주세요');
+  const btn = $('#t-sms-send'); btn.disabled = true;
+  try {
+    const r = await api('sms', { method: 'POST', body: { text } });   // 단축어와 같은 방식으로 기록
+    closeSheets(); toast(r.message || '기록했어요');
+    await loadAll(); render();
+  } catch (e) { toast(e.message); }
+  finally { btn.disabled = false; }
+});
 $('#t-del').addEventListener('click', deleteTx);
 $('#fx-add').addEventListener('click', () => openFx(null));
 $('#f-save').addEventListener('click', saveFx);
