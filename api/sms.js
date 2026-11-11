@@ -23,6 +23,7 @@ const FIXED_ALIASES = [
   [/icloud|아이클라우드/i, /APPLE|ICLOUD/i],
   [/capcut|캡컷/i, /APPLE|CAPCUT/i],
   [/마운자로/, /브이에스라인|VS ?라인|VSLINE/i],
+  [/비타민/, /와우바이오텍/],
   [/티빙/, /TVING|티빙/i],
   [/노션/, /NOTION|노션/i],
   [/이모티콘/, /이모티콘/],
