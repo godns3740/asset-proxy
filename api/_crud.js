@@ -1,9 +1,10 @@
-import { requireAuth, primaryOwner, isUser } from './_auth.js';
+import { requireAuth, actAs } from './_auth.js';
 
 // 사람별 데이터 공통 처리
 //  GET    ?owner=이름 (생략하면 내 것, all 이면 모두)  → 누구 것이든 볼 수 있음
-//  POST   항상 내 이름으로 저장 (첫 번째 사용자만 ?as=이름 으로 대신 추가 가능)
+//  POST   항상 내 이름으로 저장
 //  PATCH  / DELETE  내 것만 고칠 수 있음
+//  (첫 번째 사용자만 ?as=이름 으로 다른 사람 것을 대신 추가·수정·삭제 가능)
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const headers = () => ({
@@ -35,7 +36,9 @@ export function crudHandler(table, { order = 'id.asc', extraFilters } = {}) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (!requireAuth(req, res)) return;
     const base = `${SUPABASE_URL}/rest/v1/${table}`;
-    const me = req.owner, q = req.query || {};
+    const q = req.query || {};
+    const me = req.method === 'GET' ? req.owner : actAs(req, res);
+    if (!me) return;
     try {
       if (req.method === 'GET') {
         const who = q.owner === 'all' ? '' : `&owner=eq.${enc(q.owner || me)}`;
@@ -44,12 +47,7 @@ export function crudHandler(table, { order = 'id.asc', extraFilters } = {}) {
       }
       if (req.method === 'POST') {
         const rows = Array.isArray(req.body) ? req.body : [req.body];
-        let who = me;
-        if (q.as && q.as !== me) {
-          if (me !== primaryOwner() || !isUser(q.as)) return res.status(403).json({ error: 'forbidden', message: '다른 사람 이름으로는 추가할 수 없어요' });
-          who = q.as;
-        }
-        const body = rows.map(({ id, owner, created_at, ...rest }) => ({ ...rest, owner: who }));
+        const body = rows.map(({ id, owner, created_at, ...rest }) => ({ ...rest, owner: me }));
         const r = await fetch(base, { method: 'POST', headers: headers(), body: JSON.stringify(Array.isArray(req.body) ? body : body[0]) });
         return relay(r, res, 201);
       }

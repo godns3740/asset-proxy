@@ -1,4 +1,4 @@
-import { requireAuth } from './_auth.js';
+import { requireAuth, actAs } from './_auth.js';
 
 // 사람별 설정
 //  GET   → { me, profiles: [...] }  (둘 다 볼 수 있음)
@@ -23,10 +23,12 @@ export default async function handler(req, res) {
       return res.status(200).json({ me: req.owner, profiles: data });
     }
     if (req.method === 'PATCH') {
+      const who = actAs(req, res);
+      if (!who) return;
       const body = Object.fromEntries(Object.entries(req.body || {}).filter(([k]) => FIELDS.includes(k)));
       if (body.payday !== undefined) body.payday = Math.min(31, Math.max(1, parseInt(body.payday, 10) || 25));
       if (body.payday_rule !== undefined && !['before', 'after'].includes(body.payday_rule)) delete body.payday_rule;
-      const r = await fetch(`${base}?owner=eq.${encodeURIComponent(req.owner)}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(body) });
+      const r = await fetch(`${base}?owner=eq.${encodeURIComponent(who)}`, { method: 'PATCH', headers: headers(), body: JSON.stringify(body) });
       return res.status(r.ok ? 200 : 500).json(await r.json());
     }
     return res.status(405).json({ message: '지원하지 않는 요청이에요' });
