@@ -845,8 +845,10 @@ function settledOf(id) { return S.tx.filter(x => isSettle(x) && settleTarget(x) 
 const isAutoRecorded = t => / · \d{2}:\d{2}$/.test(t.memo || '');
 const memoName = t => String(t.memo || '').split(' · ')[0];
 const memoTime = t => { const m = String(t.memo || '').match(/ · (\d{2}:\d{2})$/); return m ? m[1] : ''; };
+// 쿠팡·네이버페이는 여러 가지를 파는 곳이라 무엇을 샀는지 자동으로 알 수 없음 (쿠팡이츠·쿠팡와우 제외)
+const isPlatformPay = t => t.type === '지출' && /쿠팡(?!이츠|와우)|네이버페이/.test(memoName(t)) && !/^(쿠팡이츠|쿠팡와우)/.test(memoName(t));
 const needsReview = t => t.type === '지출' && !t.is_fixed && t.subcategory !== REVIEWED && !isExcluded(t)
-  && (isTossUnknown(t) || ((!t.category || t.category === '기타') && isAutoRecorded(t)));
+  && (isTossUnknown(t) || isPlatformPay(t) || ((!t.category || t.category === '기타') && isAutoRecorded(t)));
 const reviewAll = () => S.tx.filter(needsReview).sort((a, b) => (b.date + memoTime(b)).localeCompare(a.date + memoTime(a)));
 function txRow(t) {
   const c = catColor(t.category);
@@ -964,12 +966,13 @@ function renderMore() {
 function reviewHint(t) {
   const name = memoName(t);
   if (isTossUnknown(t)) return ['💳', '<b>토스페이</b>로 결제해서 가게 이름이 안 남았어요. 토스 앱 → 내역에서 같은 날짜·금액을 찾아 가게 이름을 적어 주세요.'];
+  if (isPlatformPay(t)) return ['🛒', `<b>${/네이버페이/.test(name) ? '네이버페이' : '쿠팡'}</b>은 여러 가지를 파는 곳이라 무엇을 샀는지 자동으로 알 수 없어요. 산 물건에 맞는 카테고리를 골라 주세요.`];
   if (t.payment === '현금' || /ATM/i.test(name)) return ['💵', '<b>현금으로 뽑은 돈</b>이에요. 어디에 쓴(쓸) 돈인지 골라 주세요.'];
   if (t.payment === '계좌이체' && /^[가-힣]{2,4}$/.test(name)) return ['👤', `<b>${esc(name)}</b>님에게 보낸 돈이에요. 무슨 돈이었는지 적어 주세요. (예: 더치페이, 선물, 경조사)`];
   return ['🏷️', `<b>${esc(name)}</b> — 어떤 곳인지 자동으로 알 수 없었어요. 무엇을 산 곳인지 골라 주세요.`];
 }
 function learnedCategory(name) {   // 이전에 같은 이름을 어떤 카테고리로 정리했는지
-  if (!name || /^토스페이|ATM/i.test(name)) return '';
+  if (!name || /^토스페이|ATM|쿠팡(?!이츠)|네이버페이/i.test(name)) return '';
   const hit = S.tx.filter(x => x.type === '지출' && x.category && x.category !== '기타' && (memoName(x) === name || memoName(x).endsWith(`(${name})`))).sort((a, b) => b.date.localeCompare(a.date))[0];
   return hit ? hit.category : '';
 }
@@ -1216,8 +1219,8 @@ function renderTogether() {
 }
 
 // ─── 처음 설정 ───────────────────────────────────────────────
-const ST_CATS = { 지출: ['외식', '배달', '커피/간식', '생활비', '장보기', '교통', '쇼핑', '의료', '경조사', '데이트', '술약속', '오락', '구독', '기타'], 수입: ['월급', '부수입', '기타수입'] };
-const ST_FIXED = [['월세', '주거'], ['관리비', '주거'], ['휴대폰비', '통신'], ['인터넷', '통신'], ['보험', '보험'], ['대출이자', '대출'], ['적금', '저축'], ['청약', '저축'], ['넷플릭스', '구독'], ['유튜브 프리미엄', '구독'], ['쿠팡와우', '구독'], ['후불교통', '교통'], ['부모님 용돈', '가족'], ['커플 통장', '데이트']];
+const ST_CATS = { 지출: ['외식', '배달', '커피/간식', '생활비', '장보기', '교통', '쇼핑/미용', '의료', '경조사', '데이트-식비', '데이트-오락', '술약속', '취미/여행/오락', '자기계발', '구독', '기타'], 수입: ['월급', '부수입', '기타수입', '정산'] };
+const ST_FIXED = [['월세', '주거'], ['관리비', '주거'], ['휴대폰비', '통신'], ['인터넷', '통신'], ['보험', '보험'], ['대출이자', '대출'], ['적금', '저축'], ['청약', '저축'], ['넷플릭스', '구독'], ['유튜브 프리미엄', '구독'], ['쿠팡와우', '구독'], ['후불교통', '교통'], ['부모님 용돈', '가족'], ['커플 통장', '데이트-식비']];
 // 은행·카드: ok = 문자 형식을 이미 읽을 수 있음, match = 통장 문자에 카드값이 찍히는 이름
 const ST_BANKS = [
   { k: '카카오뱅크', kind: 'bank', ok: true, how: '카카오뱅크 앱 → 계좌 → 설정(⚙︎) → 입출금/카드결제 알림 → SMS(유료). "입출금 + 카드결제"를 고르면 월급·이체·체크카드가 모두 와요.' },
