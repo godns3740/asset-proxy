@@ -125,7 +125,7 @@ export default async function handler(req, res) {
     const ruleCategory = category;
     if (fixedHit && fixedHit.category && names.includes(fixedHit.category)) category = fixedHit.category;
     // 자동 분류가 안 되면, 예전에 같은 가게·사람을 직접 정리한 카테고리를 따릅니다
-    if (!fixedHit && (category === '기타' || category === '기타수입') && p.merchant.length >= 2 && !/^토스페이|ATM|현금/i.test(p.merchant)) {
+    if (!fixedHit && (category === '기타' || category === '기타수입') && p.merchant.length >= 2 && !/^토스페이|ATM|현금|쿠팡(?!이츠)|네이버페이/i.test(p.merchant)) {
       const lr = await fetch(`${base}/transactions?select=category,memo${mine}&type=eq.${enc(p.type)}&category=neq.${enc('기타')}&category=neq.${enc('기타수입')}&or=(memo.like.${enc(p.merchant + ' · *')},memo.like.${enc('*(' + p.merchant + ') · *')},memo.eq.${enc(p.merchant)})&order=date.desc&limit=1`, { headers: headers() });
       const learned = await lr.json().catch(() => []);
       if (Array.isArray(learned) && learned[0] && names.includes(learned[0].category)) category = learned[0].category;
