@@ -29,3 +29,27 @@ on conflict (owner) do nothing;
 insert into profiles (owner, display_name, setup_done)
 values ('성재', '성재', false)
 on conflict (owner) do nothing;
+
+-- 이름 중복 규칙을 사람별로 (규원의 "외식", 성재의 "외식" 모두 허용)
+do $$
+declare r record;
+begin
+  for r in
+    select c.conname, c.conrelid::regclass as tbl
+    from pg_constraint c
+    where c.conrelid in ('categories'::regclass, 'fixed_expenses'::regclass, 'assets'::regclass)
+      and c.contype = 'u'
+  loop
+    execute format('alter table %s drop constraint %I', r.tbl, r.conname);
+  end loop;
+  for r in
+    select indexname from pg_indexes
+    where tablename in ('categories', 'fixed_expenses', 'assets')
+      and indexdef ilike 'create unique index%' and indexname not like '%pkey'
+      and indexname <> 'categories_owner_type_name'
+  loop
+    execute format('drop index if exists %I', r.indexname);
+  end loop;
+end $$;
+
+create unique index if not exists categories_owner_type_name on categories (owner, type, name);
