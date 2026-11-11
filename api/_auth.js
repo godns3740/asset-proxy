@@ -19,6 +19,14 @@ const same = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.
 export const primaryOwner = () => (process.env.APP_TOKEN ? (process.env.APP_OWNER || '규원') : null);
 export const isUser = name => users().some(([n]) => n === name);
 
+// ?as=이름 : 첫 번째 사용자만 다른 사람 데이터를 대신 고칠 수 있음. 아니면 403 을 보내고 null
+export function actAs(req, res) {
+  const as = (req.query || {}).as;
+  if (!as || as === req.owner) return req.owner;
+  if (req.owner !== primaryOwner() || !isUser(as)) { res.status(403).json({ error: 'forbidden', message: '다른 사람 이름으로는 고칠 수 없어요' }); return null; }
+  return as;
+}
+
 export function ownerFor(token) {
   const hit = users().find(([, t]) => t && same(String(token || ''), t));
   return hit ? hit[0] : null;
