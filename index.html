@@ -145,7 +145,8 @@ input,select{font:inherit;color:var(--text)}
 .who .ro{font-size:11px;color:var(--yellow);background:rgba(251,191,36,.12);padding:4px 8px;border-radius:999px;white-space:nowrap}
 body.readonly .fab,body.readonly #fx-add,body.readonly #cat-add,body.readonly #as-refresh{display:none!important}
 body.together .tabs,body.together .fab{display:none!important}
-.tg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.tg-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-bottom:12px}
+.tg-grid > *{min-width:0}
 .tg-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px}
 .tg-card .nm{font-size:13px;color:var(--sub);margin-bottom:2px}
 .tg-card .big{font-size:20px;font-weight:700;letter-spacing:-.02em}
@@ -1206,7 +1207,7 @@ function renderTogether() {
       ${catRows.map(([c, v]) => `<tr class="${/^데이트/.test(c) ? 'date' : ''}"><td><span class="dot" style="background:${esc(ppl.map(x => withPerson(x.owner, () => catColor(c))).find(col => col !== '#6b7280') || '#6b7280')};margin-right:6px"></span>${esc(c)}</td>${v.map(n => `<td class="num">${n ? short(n) : '<span class="muted">-</span>'}</td>`).join('')}<td class="num"><b>${short(v.reduce((p, q) => p + q, 0))}</b></td></tr>`).join('') || `<tr><td colspan="${ppl.length + 2}" class="muted">아직 지출이 없어요</td></tr>`}
       </table></div>
     <div class="card"><h2>많이 쓴 곳 TOP 3</h2>
-      <div class="tg-grid" style="margin:0">${ppl.map(x => `<div><div class="sub" style="font-size:12px;margin-bottom:4px">${esc(x.name)}</div>${top(x).map(([n, v]) => `<div class="ln" style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">${esc(n)}</span><span class="num">${short(v)}</span></div>`).join('') || '<div class="muted" style="font-size:13px">-</div>'}</div>`).join('')}</div></div>
+      <div class="tg-grid" style="margin:0;gap:18px">${ppl.map(x => `<div><div class="sub" style="font-size:12px;margin-bottom:4px">${esc(x.name)}</div>${top(x).map(([n, v]) => `<div class="ln" style="display:flex;justify-content:space-between;gap:6px;font-size:13px;padding:3px 0"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)}</span><span class="num" style="flex:none">${short(v)}</span></div>`).join('') || '<div class="muted" style="font-size:13px">-</div>'}</div>`).join('')}</div></div>
     <div class="card"><h2>내 돈 <span class="muted" style="font-size:12px;font-weight:400">통장별 잔액 합계</span></h2>
       ${ppl.map(x => `<div class="ln" style="display:flex;justify-content:space-between;padding:4px 0"><span>${esc(x.name)}</span><span class="num"><b>${W(x.at.total)}</b> <span class="sub" style="font-size:12px">· 바로 쓸 돈 ${short(x.at.cash)}</span></span></div>`).join('')}
       ${shared.length ? `<div class="sub" style="font-size:12px;margin:10px 0 4px">모임통장</div>${shared.map(a => `<div class="ln" style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span>${esc(a.name)}</span><span class="num">${W(a.amount)}</span></div>`).join('')}` : ''}
