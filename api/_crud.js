@@ -1,8 +1,8 @@
-import { requireAuth } from './_auth.js';
+import { requireAuth, primaryOwner, isUser } from './_auth.js';
 
 // 사람별 데이터 공통 처리
 //  GET    ?owner=이름 (생략하면 내 것, all 이면 모두)  → 누구 것이든 볼 수 있음
-//  POST   항상 내 이름으로 저장
+//  POST   항상 내 이름으로 저장 (첫 번째 사용자만 ?as=이름 으로 대신 추가 가능)
 //  PATCH  / DELETE  내 것만 고칠 수 있음
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -44,7 +44,12 @@ export function crudHandler(table, { order = 'id.asc', extraFilters } = {}) {
       }
       if (req.method === 'POST') {
         const rows = Array.isArray(req.body) ? req.body : [req.body];
-        const body = rows.map(({ id, owner, created_at, ...rest }) => ({ ...rest, owner: me }));
+        let who = me;
+        if (q.as && q.as !== me) {
+          if (me !== primaryOwner() || !isUser(q.as)) return res.status(403).json({ error: 'forbidden', message: '다른 사람 이름으로는 추가할 수 없어요' });
+          who = q.as;
+        }
+        const body = rows.map(({ id, owner, created_at, ...rest }) => ({ ...rest, owner: who }));
         const r = await fetch(base, { method: 'POST', headers: headers(), body: JSON.stringify(Array.isArray(req.body) ? body : body[0]) });
         return relay(r, res, 201);
       }

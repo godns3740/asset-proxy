@@ -15,6 +15,10 @@ function users() {
 }
 const same = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
 
+// 첫 번째 사용자(APP_TOKEN 주인)는 다른 사람 대신 내역을 추가할 수 있어요 (캡처 정리 등)
+export const primaryOwner = () => (process.env.APP_TOKEN ? (process.env.APP_OWNER || '규원') : null);
+export const isUser = name => users().some(([n]) => n === name);
+
 export function ownerFor(token) {
   const hit = users().find(([, t]) => t && same(String(token || ''), t));
   return hit ? hit[0] : null;
