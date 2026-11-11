@@ -6,14 +6,17 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="가계부">
-<meta name="theme-color" content="#0e0f11">
-<title>규원의 가계부</title>
+<meta name="theme-color" content="#0c0f16">
+<title>가계부</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{
-  --bg:#0e0f11; --surface:#16181c; --surface2:#1e2128; --surface3:#262a32;
-  --border:#2a2d35; --text:#f0f1f3; --sub:#9a9fab; --muted:#5f6470;
-  --accent:#4ade80; --accent-dim:rgba(74,222,128,.13);
+  --bg:#0c0f16; --surface:#141923; --surface2:#1b2130; --surface3:#242b3b;
+  --border:#283043; --text:#f0f1f3; --sub:#9a9fab; --muted:#5f6470;
+  --accent:#4c8dff; --accent-dim:rgba(76,141,255,.15);
   --red:#f87171; --red-dim:rgba(248,113,113,.13); --blue:#38bdf8; --yellow:#fbbf24;
   --radius:16px; --tab-h:64px;
   --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
@@ -122,12 +125,12 @@ input,select{font:inherit;color:var(--text)}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:13px 16px;border-radius:13px;font-weight:600;font-size:15px}
-.btn.primary{background:var(--accent);color:#06210f}
+.btn.primary{background:var(--accent);color:#fff}
 .btn.ghost{background:var(--surface2);color:var(--text)}
 .btn.danger{background:var(--red-dim);color:var(--red)}
 .btn.small{padding:7px 12px;font-size:13px;border-radius:10px}
 .btn:disabled{opacity:.5}
-.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(var(--tab-h) + var(--safe-b) + 16px);width:56px;height:56px;border-radius:18px;background:var(--accent);color:#06210f;font-size:28px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:40}
+.fab{position:fixed;right:max(16px,calc(50% - 264px));bottom:calc(var(--tab-h) + var(--safe-b) + 16px);width:56px;height:56px;border-radius:18px;background:var(--accent);color:#fff;font-size:28px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:40}
 
 /* tab bar */
 .tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--tab-h) + var(--safe-b));padding-bottom:var(--safe-b);background:rgba(18,20,23,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--border);display:flex;justify-content:center;z-index:50}
@@ -514,7 +517,7 @@ const API = '';                      // 같은 주소의 /api 사용
 const TOKEN_KEY = 'gw_app_token';    // 예전 앱과 같은 저장 키
 const SALARY_CATS = ['월급', '급여'];
 const PAYMENTS = ['체크카드', '계좌이체', '토스', '카카오페이', '신용카드', '현금'];
-const PALETTE = ['#4ade80','#22d3ee','#38bdf8','#818cf8','#a78bfa','#c084fc','#f472b6','#fb7185','#f87171','#fb923c','#f59e0b','#fbbf24','#a3e635','#94a3b8','#6b7280'];
+const PALETTE = ['#4c8dff','#22d3ee','#38bdf8','#818cf8','#a78bfa','#c084fc','#f472b6','#fb7185','#f87171','#fb923c','#f59e0b','#fbbf24','#a3e635','#94a3b8','#6b7280'];
 
 // ─── 유틸 ────────────────────────────────────────────────────
 const $ = s => document.querySelector(s);
@@ -1743,6 +1746,9 @@ $('#st-body').addEventListener('click', async e => {
 });
 $('#rv-body').addEventListener('input', e => { if (e.target.id === 'rv-name' && S.rvDraft) S.rvDraft.name = e.target.value; });
 $('#rv-body').addEventListener('change', e => { if (e.target.id === 'rv-same' && S.rvDraft) S.rvDraft.same = e.target.checked; });
+
+// 홈 화면 앱: 화면을 휴대폰에 저장해서 빠르게 열기
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 
 boot();
 </script>
