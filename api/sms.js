@@ -154,8 +154,29 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, ignored: true, message: `카드값 출금 ${won(p.amount)} · 결제마다 이미 기록돼서 건너뜀${syncMsg}` });
     }
 
+    // 충전 환불: 페이(하나머니·카카오페이 등)에 충전했다가 남은 돈을 내 통장으로 돌려받으면 내 이름으로 입금됨
+    //  → 24시간 안에 나간 '충전' 지출의 90~100% 금액이면 그 충전에서 빼는 정산으로 기록
+    let refundOf = null;
+    if (p.isSelfTransfer && !p.isSafebox && p.kind === '입금') {
+      const since = new Date(Date.parse(p.date) - 86400e3).toISOString().slice(0, 10);
+      const rr = await fetch(`${base}/transactions?select=id,date,type,amount,memo,is_fixed,subcategory${mine}&date=gte.${since}&date=lte.${p.date}&order=date.desc,id.desc`, { headers: headers() });
+      const recent = await rr.json().catch(() => []);
+      if (Array.isArray(recent)) {
+        const at = Date.parse(`${p.date}T${p.time || '23:59'}:00Z`);
+        const timeOf = t => { const m = / · (\d{2}):(\d{2})/.exec(t.memo || ''); return m ? `${m[1]}:${m[2]}` : '00:00'; };
+        const back = id => recent.filter(t => t.subcategory === `정산:${id}`).reduce((a, t) => a + Number(t.amount), 0);
+        refundOf = recent.find(t => {
+          if (t.type !== '지출' || t.is_fixed || !/충전/.test(t.memo || '')) return false;
+          const when = Date.parse(`${t.date}T${timeOf(t)}:00Z`), left = Number(t.amount) - back(t.id);
+          return when <= at && at - when <= 86400e3 && p.amount <= left && p.amount >= Number(t.amount) * 0.9;
+        }) || null;
+      }
+      if (refundOf) Object.assign(tx, { type: '수입', category: SETTLE_CAT, subcategory: `정산:${refundOf.id}`, payment: tx.payment, memo: `충전 환불 (${p.merchant})${p.time ? ' · ' + p.time : ''}`,
+        settleNote: `${String(refundOf.memo).split(' · ')[0]} ${won(Number(refundOf.amount))}에서 돌려받음 → 내 몫 ${won(Number(refundOf.amount) - p.amount)}` });
+    }
+
     // 내 계좌끼리 옮긴 돈은 수입/지출이 아니므로 기록하지 않습니다.
-    if (p.isSelfTransfer && !selfHit) {
+    if (p.isSelfTransfer && !selfHit && !refundOf) {
       const what = p.isSafebox ? (p.kind === '출금' ? '세이프박스에 넣음' : '세이프박스에서 꺼냄') : '내 계좌 이체';
       return res.status(200).json({ ok: true, ignored: true, message: `${what} ${won(p.amount)} · 기록 안 함${syncMsg}` });
     }
@@ -172,7 +193,7 @@ export default async function handler(req, res) {
     }
 
     // 고정지출 환급: settings.fixedRefunds [{ from: '삼성전자', fixed: '대출이자' }] — 회사가 대출이자 일부를 돌려주는 경우
-    const refund = p.type === '수입' && !['월급', '급여'].includes(tx.category)
+    const refund = !refundOf && p.type === '수입' && !['월급', '급여'].includes(tx.category)
       ? (profile.settings.fixedRefunds || []).find(x => x && x.from && x.fixed && p.merchant.includes(x.from)) : null;
     if (refund) {
       const since = new Date(Date.parse(p.date) - 62 * 86400e3).toISOString().slice(0, 10);
@@ -185,7 +206,7 @@ export default async function handler(req, res) {
     }
 
     // 더치페이 정산: 사람 이름으로 들어온 돈이 최근 내 결제와 맞으면 그 결제에서 뺍니다
-    if (!refund && p.type === '수입' && /^[가-힣]{2,4}$/.test(p.merchant) && !['월급', '급여'].includes(tx.category)) {
+    if (!refund && !refundOf && p.type === '수입' && /^[가-힣]{2,4}$/.test(p.merchant) && !['월급', '급여'].includes(tx.category)) {
       const since = new Date(Date.parse(p.date) - 86400e3).toISOString().slice(0, 10);
       const rr = await fetch(`${base}/transactions?select=id,date,type,category,amount,memo,is_fixed,subcategory,payment${mine}&date=gte.${since}&date=lte.${p.date}`, { headers: headers() });
       const recent = await rr.json().catch(() => []);
