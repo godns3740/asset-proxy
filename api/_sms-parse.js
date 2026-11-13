@@ -9,7 +9,9 @@
 // 잔액 1,240,662원
 
 // 카카오뱅크: "출금 9,400원" / 신한: "출금 20,000" (원 없음)
-const AMOUNT_LINE = /(입금|출금|결제|승인|사용|취소)[^\d]*([\d,]+)\s*원?|([\d,]+)\s*원[^\n]*?(입금|출금|결제|승인|사용|취소)/;
+const AMOUNT_LINE = /(입금|출금|결제|승인|사용|취소)[\s:]*([\d,]+)\s*원?(?![\d/.:])|([\d,]+)\s*원[^\n]*?(입금|출금|결제|승인|사용|취소)/;
+// 광고·안내 문자 (쿠폰, 이벤트 등): 금액처럼 보이는 숫자가 있어도 기록하지 않음
+const AD_SMS = /\(광고\)|\[광고\]|^광고|무료\s*수신\s*거부|수신거부|쿠폰|이벤트|본\s*문자를/m;
 
 function kstNow() {
   return new Date(Date.now() + 9 * 3600 * 1000); // UTC 필드로 읽으면 한국 시간
@@ -49,6 +51,8 @@ export function parseSms(text, now, opts = {}) {
   if (!text || typeof text !== 'string') return { ok: false, reason: '문자 내용이 비어 있어요' };
   const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
     .filter(s => !/^\[Web\s*발신\]$/.test(s));
+
+  if (AD_SMS.test(text) && !/잔액/.test(text)) return { ok: false, reason: '광고·안내 문자라 기록하지 않았어요' };
 
   const card = parseCardSms(lines, text, now);
   if (card) return card;
